@@ -4,6 +4,973 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pregnancy Calendar</title>
+    <style>
+      /* ===== RESET & BASE ===== */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg-primary:    #0a1428;
+        --bg-container:  #0d1b2a;
+        --bg-section:    #162533;
+        --bg-header:     #1a2f3f;
+        --accent:        #00bfff;
+        --border:        #1a3a4a;
+        --text-primary:  #e0e0e0;
+        --text-secondary:#a0a0a0;
+        --t1-color:      #ff6b9d;
+        --t2-color:      #4ecdc4;
+        --t3-color:      #45b7d1;
+        --delete-color:  #ff6b6b;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        line-height: 1.5;
+      }
+
+      /* ===== HEADER ===== */
+      header {
+        background: var(--bg-container);
+        border-bottom: 2px solid var(--accent);
+        padding: 24px 32px;
+        text-align: center;
+      }
+
+      header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      header p {
+        color: var(--text-secondary);
+        margin-top: 6px;
+        font-size: 0.95rem;
+      }
+
+      /* ===== MAIN WRAPPER ===== */
+      .wrapper {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 24px 16px;
+      }
+
+      /* ===== TWO-COLUMN LAYOUT ===== */
+      .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 24px;
+        align-items: start;
+      }
+
+      @media (max-width: 1024px) {
+        .main-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ===== CALENDAR AREA ===== */
+      .calendar-area {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .month-card {
+        background: var(--bg-container);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        transition: border-color 0.2s ease;
+      }
+
+      .month-card:hover { border-color: var(--accent); }
+
+      .month-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+      }
+
+      /* 8 columns: week-num + Mon-Sun */
+      .cal-grid {
+        display: grid;
+        grid-template-columns: 44px repeat(7, 1fr);
+        gap: 2px;
+      }
+
+      .cal-header-cell {
+        text-align: center;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 6px 2px;
+      }
+
+      .week-num-header {
+        color: var(--accent);
+        background: #0d1f2d;
+        border-radius: 4px;
+      }
+
+      .week-num-cell {
+        color: var(--accent);
+        background: #0d1f2d;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: default;
+      }
+
+      .day-cell {
+        aspect-ratio: 1;
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        position: relative;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        padding: 4px;
+        overflow: hidden;
+        transition: border-color 0.2s ease, background 0.2s ease;
+        min-height: 44px;
+      }
+
+      .day-cell:hover {
+        border-color: var(--accent);
+        background: #1a2f3f;
+      }
+
+      .day-cell.other-month { opacity: 0.3; }
+
+      .day-cell.today {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .day-cell.today .day-number { color: #0a1428; }
+      .day-cell.today .trimester-badge { color: #0a1428; }
+      .day-cell.today .note-indicator { color: #0a1428; }
+
+      .day-number {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--accent);
+        line-height: 1;
+      }
+
+      .trimester-badge {
+        font-size: 0.55rem;
+        font-weight: 600;
+        padding: 1px 4px;
+        border-radius: 8px;
+        margin-top: 2px;
+        display: inline-block;
+        line-height: 1.4;
+      }
+
+      .badge-t1 { background: rgba(255,107,157,0.25); color: var(--t1-color); }
+      .badge-t2 { background: rgba(78,205,196,0.25);  color: var(--t2-color); }
+      .badge-t3 { background: rgba(69,183,209,0.25);  color: var(--t3-color); }
+
+      .note-indicator {
+        position: absolute;
+        bottom: 2px;
+        right: 3px;
+        font-size: 0.6rem;
+        line-height: 1;
+      }
+
+      /* ===== SIDEBAR ===== */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: sticky;
+        top: 16px;
+      }
+
+      .section-card {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 18px;
+        transition: border-color 0.2s ease;
+      }
+
+      .section-card:hover { border-color: var(--accent); }
+
+      .section-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 14px;
+      }
+
+      /* PROGRESS */
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .stat-box {
+        background: var(--bg-header);
+        border-radius: 6px;
+        padding: 12px;
+        text-align: center;
+      }
+
+      .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent);
+        line-height: 1;
+      }
+
+      .stat-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+
+      /* TRIMESTER CARDS */
+      .trimester-card {
+        background: var(--bg-header);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 12px 12px 12px 14px;
+        margin-bottom: 8px;
+        border-left-width: 3px;
+        border-left-style: solid;
+      }
+
+      .trimester-card:last-child { margin-bottom: 0; }
+
+      .trimester-name {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .trimester-desc {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+
+      /* IMPORTANT DATES */
+      .date-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 8px 8px 12px;
+        border-left: 3px solid var(--accent);
+        margin-bottom: 8px;
+        background: var(--bg-header);
+        border-radius: 0 4px 4px 0;
+      }
+
+      .date-item:last-child { margin-bottom: 0; }
+
+      .date-icon { font-size: 1rem; }
+
+      .date-label {
+        font-size: 0.75rem;
+        color: var(--accent);
+        font-weight: 600;
+        flex: 1;
+      }
+
+      .date-value {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+      }
+
+      /* NOTES */
+      .notes-input-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .notes-input-row input {
+        flex: 1;
+        background: var(--bg-header);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-primary);
+        padding: 8px 10px;
+        font-size: 0.8rem;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s ease;
+      }
+
+      .notes-input-row input:focus { border-color: var(--accent); }
+
+      .notes-list {
+        max-height: 300px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .notes-list::-webkit-scrollbar { width: 4px; }
+      .notes-list::-webkit-scrollbar-track { background: var(--bg-header); }
+      .notes-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+      .note-item {
+        background: var(--bg-header);
+        border-radius: 4px;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .note-item-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .note-date {
+        font-size: 0.72rem;
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .note-text {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        word-break: break-word;
+      }
+
+      .notes-empty {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        text-align: center;
+        padding: 12px;
+      }
+
+      /* ===== BUTTONS ===== */
+      .btn {
+        background: var(--accent);
+        color: #0a1428;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 16px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        font-family: inherit;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        min-height: 44px;
+      }
+
+      .btn:hover { transform: translateY(-1px); opacity: 0.9; }
+      .btn:active { transform: translateY(0); }
+
+      .btn-sm {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+        min-height: 28px;
+      }
+
+      .btn-delete {
+        background: var(--delete-color);
+        color: #fff;
+      }
+
+      /* ===== FEATURE CARDS ===== */
+      .feature-section {
+        margin-top: 32px;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+
+      @media (max-width: 800px) {
+        .feature-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+
+      @media (max-width: 480px) {
+        .feature-grid { grid-template-columns: 1fr; }
+        .wrapper { padding: 12px; }
+        header { padding: 18px 16px; }
+        header h1 { font-size: 1.4rem; }
+      }
+
+      .feature-card {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 20px;
+        text-align: center;
+        transition: border-color 0.2s ease;
+      }
+
+      .feature-card:hover { border-color: var(--accent); }
+
+      .feature-icon { font-size: 2rem; margin-bottom: 12px; }
+
+      .feature-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+
+      .feature-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+
+      /* ===== MODAL ===== */
+      .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 20, 40, 0.85);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .modal-backdrop.open { display: flex; }
+
+      .modal {
+        background: var(--bg-container);
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        padding: 28px;
+        width: 100%;
+        max-width: 420px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .modal-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .modal textarea {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-primary);
+        padding: 10px 12px;
+        font-size: 0.88rem;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 100px;
+        outline: none;
+        transition: border-color 0.2s ease;
+      }
+
+      .modal textarea:focus { border-color: var(--accent); }
+
+      .modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+
+      .btn-cancel {
+        background: var(--bg-header);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+      }
+
+      .btn-cancel:hover { border-color: var(--accent); color: var(--accent); }
+    </style>
   </head>
-  <body></body>
+  <body>
+
+    <!-- HEADER -->
+    <header>
+      <h1>👶 Pregnancy Calendar</h1>
+      <p>Tracking your journey from <strong>May 5, 2026</strong> · 40 weeks of wonder</p>
+    </header>
+
+    <div class="wrapper">
+
+      <!-- MAIN TWO-COLUMN GRID -->
+      <div class="main-grid">
+
+        <!-- CALENDAR (left) -->
+        <div class="calendar-area" id="calendarArea"></div>
+
+        <!-- SIDEBAR (right) -->
+        <aside class="sidebar">
+
+          <!-- PROGRESS -->
+          <div class="section-card">
+            <div class="section-title">📊 Progress</div>
+            <div class="stat-grid">
+              <div class="stat-box">
+                <div class="stat-number" id="currentWeek">—</div>
+                <div class="stat-label">Current Week</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number" id="weeksRemaining">—</div>
+                <div class="stat-label">Weeks Remaining</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TRIMESTERS -->
+          <div class="section-card">
+            <div class="section-title">📅 Trimesters</div>
+            <div class="trimester-card" style="border-left-color: var(--t1-color);">
+              <div class="trimester-name">1st Trimester · Weeks 1–13</div>
+              <div class="trimester-desc">May 5 – Aug 3, 2026 · Growth of vital organs, morning sickness, and early development.</div>
+            </div>
+            <div class="trimester-card" style="border-left-color: var(--t2-color);">
+              <div class="trimester-name">2nd Trimester · Weeks 14–26</div>
+              <div class="trimester-desc">Aug 4 – Oct 26, 2026 · Baby becomes active, anatomy scan, energy often returns.</div>
+            </div>
+            <div class="trimester-card" style="border-left-color: var(--t3-color);">
+              <div class="trimester-name">3rd Trimester · Weeks 27–40</div>
+              <div class="trimester-desc">Oct 27, 2026 – Feb 9, 2027 · Rapid growth, birth prep, and the final countdown.</div>
+            </div>
+          </div>
+
+          <!-- IMPORTANT DATES -->
+          <div class="section-card">
+            <div class="section-title">⭐ Important Dates</div>
+            <div id="importantDates"></div>
+          </div>
+
+          <!-- NOTES -->
+          <div class="section-card">
+            <div class="section-title">📝 Notes</div>
+            <div class="notes-input-row">
+              <input type="text" id="quickNoteInput" placeholder="Add a note for today…" />
+              <button class="btn btn-sm" onclick="addQuickNote()">Add</button>
+            </div>
+            <div class="notes-list" id="notesList"></div>
+          </div>
+
+        </aside>
+      </div>
+
+      <!-- FEATURE CARDS -->
+      <div class="feature-section">
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">📆</div>
+            <div class="feature-title">Weekly Tracking</div>
+            <div class="feature-desc">Every week is numbered from conception. Watch your baby grow week by week through all three trimesters.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🌟</div>
+            <div class="feature-title">Milestone Dates</div>
+            <div class="feature-desc">Key appointments auto-calculated: ultrasounds, checkups, and your due date all in one place.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔔</div>
+            <div class="feature-title">Smart Reminders</div>
+            <div class="feature-desc">Never miss an important date. All five essential pregnancy milestones are highlighted in the sidebar.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">✏️</div>
+            <div class="feature-title">Quick Notes</div>
+            <div class="feature-desc">Click any calendar date to attach a personal note. Everything is saved locally in your browser.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /wrapper -->
+
+    <!-- MODAL -->
+    <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
+      <div class="modal">
+        <div class="modal-title" id="modalTitle">Add Note</div>
+        <textarea id="modalTextarea" placeholder="Write your note here…"></textarea>
+        <div class="modal-actions">
+          <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+          <button class="btn" onclick="saveModal()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ===== CONSTANTS =====
+      const START_DATE   = new Date(2026, 4, 5);  // May 5 2026 (month is 0-indexed)
+      const TOTAL_WEEKS  = 40;
+      const STORAGE_KEY  = 'pregnancyNotes';
+      const MONTH_NAMES  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const DAY_ABBREV   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+      let notes       = {};   // { 'YYYY-MM-DD': 'text' }
+      let modalDate   = null; // ISO string currently open in modal
+
+      // ===== UTILITY =====
+
+      function dateToISO(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+      }
+
+      function isoToDisplay(iso) {
+        const [y, m, d] = iso.split('-');
+        return `${MONTH_NAMES[parseInt(m) - 1]} ${parseInt(d)}, ${y}`;
+      }
+
+      function addDays(date, n) {
+        const d = new Date(date);
+        d.setDate(d.getDate() + n);
+        return d;
+      }
+
+      // Days since May 5 2026 (0 = May 5)
+      function daysSinceStart(date) {
+        const d0 = new Date(START_DATE.getFullYear(), START_DATE.getMonth(), START_DATE.getDate());
+        const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        return Math.round((d1 - d0) / 86400000);
+      }
+
+      // Custom week formula:
+      //   W1 = May 5-10 (days 0-5), W2 starts day 6 (Mon May 11)
+      //   day 0-5 → week 1
+      //   day 6+  → floor((day - 6) / 7) + 2
+      function weekNumber(date) {
+        const diff = daysSinceStart(date);
+        if (diff < 0) return null;
+        if (diff < 6) return 1;
+        return Math.floor((diff - 6) / 7) + 2;
+      }
+
+      function trimesterOf(week) {
+        if (week <= 13) return 1;
+        if (week <= 26) return 2;
+        return 3;
+      }
+
+      function trimesterBadgeClass(week) {
+        const t = trimesterOf(week);
+        return t === 1 ? 'badge-t1' : t === 2 ? 'badge-t2' : 'badge-t3';
+      }
+
+      // ===== NOTES PERSISTENCE =====
+
+      function loadNotes() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          notes = raw ? JSON.parse(raw) : {};
+        } catch { notes = {}; }
+      }
+
+      function saveNotes() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      }
+
+      // ===== CALENDAR RENDERING =====
+
+      function getMonthsToRender() {
+        // May 2026 (index 4) to February 2027 (index 1)
+        const months = [];
+        for (let i = 0; i < 10; i++) {
+          const year  = i < 8 ? 2026 : 2027;
+          const month = (4 + i) % 12;  // 4=May … 11=Dec then 0=Jan, 1=Feb
+          months.push({ year, month });
+        }
+        return months;
+      }
+
+      // Returns the Monday on or before the given date
+      function startOfWeekMon(date) {
+        const d = new Date(date);
+        const day = d.getDay(); // 0=Sun, 1=Mon...
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        return d;
+      }
+
+      function renderCalendar() {
+        const area   = document.getElementById('calendarArea');
+        area.innerHTML = '';
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        getMonthsToRender().forEach(({ year, month }) => {
+          const card = document.createElement('div');
+          card.className = 'month-card';
+
+          // Title
+          const title = document.createElement('div');
+          title.className = 'month-title';
+          title.textContent = `${MONTH_NAMES[month].toUpperCase()} ${year}`;
+          card.appendChild(title);
+
+          // Grid
+          const grid = document.createElement('div');
+          grid.className = 'cal-grid';
+
+          // Header row
+          const wkHeader = document.createElement('div');
+          wkHeader.className = 'cal-header-cell week-num-header';
+          wkHeader.textContent = 'WK';
+          grid.appendChild(wkHeader);
+
+          DAY_ABBREV.forEach(d => {
+            const cell = document.createElement('div');
+            cell.className = 'cal-header-cell';
+            cell.textContent = d;
+            grid.appendChild(cell);
+          });
+
+          // First day of month & first Monday on/before it
+          const firstOfMonth = new Date(year, month, 1);
+          const lastOfMonth  = new Date(year, month + 1, 0);
+          let cursor = startOfWeekMon(firstOfMonth);
+
+          // Week rows
+          while (cursor <= lastOfMonth) {
+            // Week number cell — use the Monday's pregnancy week (or the first day in pregnancy if week 1)
+            const weekNum = weekNumber(cursor);
+            const wkCell  = document.createElement('div');
+            wkCell.className = 'week-num-cell';
+            wkCell.textContent = weekNum !== null ? `W${weekNum}` : '';
+            grid.appendChild(wkCell);
+
+            // 7 day cells
+            for (let d = 0; d < 7; d++) {
+              const cellDate = new Date(cursor);
+              cellDate.setDate(cursor.getDate() + d);
+
+              const cell  = document.createElement('div');
+              cell.className = 'day-cell';
+
+              const isOtherMonth = cellDate.getMonth() !== month;
+              if (isOtherMonth) cell.classList.add('other-month');
+
+              const isToday = cellDate.getTime() === today.getTime();
+              if (isToday) cell.classList.add('today');
+
+              // Day number
+              const numEl = document.createElement('div');
+              numEl.className = 'day-number';
+              numEl.textContent = cellDate.getDate();
+              cell.appendChild(numEl);
+
+              // Trimester badge
+              const wk = weekNumber(cellDate);
+              if (wk !== null && wk >= 1 && wk <= TOTAL_WEEKS) {
+                const badge = document.createElement('div');
+                badge.className = `trimester-badge ${trimesterBadgeClass(wk)}`;
+                badge.textContent = `W${wk}`;
+                cell.appendChild(badge);
+              }
+
+              // Note indicator
+              const iso = dateToISO(cellDate);
+              if (notes[iso]) {
+                const ind = document.createElement('div');
+                ind.className = 'note-indicator';
+                ind.textContent = '📝';
+                cell.appendChild(ind);
+              }
+
+              // Click handler
+              cell.addEventListener('click', () => openModal(iso));
+              grid.appendChild(cell);
+            }
+
+            cursor.setDate(cursor.getDate() + 7);
+          }
+
+          card.appendChild(grid);
+          area.appendChild(card);
+        });
+      }
+
+      // ===== PROGRESS STATS =====
+
+      function updateProgress() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const wk = weekNumber(today);
+        let currentWk   = '—';
+        let remaining   = '—';
+
+        if (wk !== null && wk >= 1) {
+          currentWk = Math.min(wk, TOTAL_WEEKS);
+          remaining = Math.max(0, TOTAL_WEEKS - currentWk);
+        }
+
+        document.getElementById('currentWeek').textContent   = currentWk;
+        document.getElementById('weeksRemaining').textContent = remaining;
+      }
+
+      // ===== IMPORTANT DATES =====
+
+      function renderImportantDates() {
+        const milestones = [
+          { icon: '🎯', label: 'Due Date',          day: 280 },
+          { icon: '🔬', label: '1st Ultrasound',    day: 56  },
+          { icon: '📸', label: '2nd Anatomy Scan',  day: 119 },
+          { icon: '💉', label: '3rd Checkup',       day: 182 },
+          { icon: '🏥', label: 'Final Ultrasound',  day: 259 },
+        ];
+
+        const container = document.getElementById('importantDates');
+        container.innerHTML = '';
+
+        milestones.forEach(m => {
+          const date  = addDays(START_DATE, m.day);
+          const label = `${MONTH_NAMES[date.getMonth()].slice(0,3)} ${date.getDate()}, ${date.getFullYear()}`;
+
+          const item = document.createElement('div');
+          item.className = 'date-item';
+          item.innerHTML = `
+            <span class="date-icon">${m.icon}</span>
+            <span class="date-label">${m.label}</span>
+            <span class="date-value">${label}</span>
+          `;
+          container.appendChild(item);
+        });
+      }
+
+      // ===== NOTES SIDEBAR =====
+
+      function renderNotesList() {
+        const list = document.getElementById('notesList');
+        list.innerHTML = '';
+
+        const entries = Object.entries(notes).sort((a, b) => a[0].localeCompare(b[0]));
+
+        if (entries.length === 0) {
+          list.innerHTML = '<div class="notes-empty">No notes yet. Click a date to add one.</div>';
+          return;
+        }
+
+        entries.forEach(([iso, text]) => {
+          const item = document.createElement('div');
+          item.className = 'note-item';
+          item.innerHTML = `
+            <div class="note-item-header">
+              <span class="note-date">${isoToDisplay(iso)}</span>
+              <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
+            </div>
+            <div class="note-text">${escapeHtml(text)}</div>
+          `;
+          list.appendChild(item);
+        });
+      }
+
+      function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      function deleteNote(iso) {
+        delete notes[iso];
+        saveNotes();
+        renderNotesList();
+        renderCalendar(); // refresh indicators
+      }
+
+      function addQuickNote() {
+        const input = document.getElementById('quickNoteInput');
+        const text  = input.value.trim();
+        if (!text) return;
+
+        const today = dateToISO(new Date());
+        notes[today] = text;
+        saveNotes();
+        input.value = '';
+        renderNotesList();
+        renderCalendar();
+      }
+
+      // Allow Enter key to submit quick note
+      document.getElementById('quickNoteInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') addQuickNote();
+      });
+
+      // ===== MODAL =====
+
+      function openModal(iso) {
+        modalDate = iso;
+        document.getElementById('modalTitle').textContent = `Add Note for ${isoToDisplay(iso)}`;
+        document.getElementById('modalTextarea').value    = notes[iso] || '';
+        document.getElementById('modalBackdrop').classList.add('open');
+        document.getElementById('modalTextarea').focus();
+      }
+
+      function closeModal() {
+        document.getElementById('modalBackdrop').classList.remove('open');
+        modalDate = null;
+      }
+
+      function saveModal() {
+        const text = document.getElementById('modalTextarea').value.trim();
+        if (modalDate) {
+          if (text) {
+            notes[modalDate] = text;
+          } else {
+            delete notes[modalDate]; // empty text = delete note
+          }
+          saveNotes();
+          renderNotesList();
+          renderCalendar();
+        }
+        closeModal();
+      }
+
+      function handleBackdropClick(e) {
+        if (e.target === document.getElementById('modalBackdrop')) closeModal();
+      }
+
+      // Close modal on Escape
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+      });
+
+      // ===== INIT =====
+
+      loadNotes();
+      updateProgress();
+      renderImportantDates();
+      renderNotesList();
+      renderCalendar();
+    </script>
+  </body>
 </html>
