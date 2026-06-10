@@ -880,6 +880,49 @@
         letter-spacing: 0.5px;
       }
       .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+      /* ── ADD NOTE BUTTON ── */
+      .section-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .add-note-btn {
+        background: var(--accent);
+        color: #0a1428;
+        border: none;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        font-size: 1.3rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s, opacity 0.2s;
+        flex-shrink: 0;
+      }
+      .add-note-btn:hover { transform: scale(1.15); opacity: 0.9; }
+
+      /* ── DATE INPUT IN MODAL ── */
+      .modal input[type="date"] {
+        width: 100%;
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-primary);
+        padding: 9px 12px;
+        font-size: 0.88rem;
+        font-family: inherit;
+        outline: none;
+        color-scheme: dark;
+        transition: border-color 0.2s;
+        cursor: pointer;
+      }
+      .modal input[type="date"]:focus { border-color: var(--accent); }
     </style>
   </head>
   <body>
@@ -950,17 +993,9 @@
           </div>
 
           <div class="section-card">
-            <div class="section-title">📝 Notes</div>
-            <div class="notes-input-area">
-              <div class="notes-input-row">
-                <input type="text" id="quickNoteInput" placeholder="Note for today…" />
-                <button class="btn btn-sm" onclick="addQuickNote()">Add</button>
-              </div>
-              <select id="quickNoteTag" class="styled-select"></select>
-              <div class="cost-input-row">
-                <span class="cost-prefix">₹</span>
-                <input type="number" id="quickNoteCost" placeholder="Cost (optional)" min="0" step="any" />
-              </div>
+            <div class="section-title-row">
+              <div class="section-title" style="margin-bottom:0">📝 Notes</div>
+              <button class="add-note-btn" onclick="openAddNoteModal()" title="Add note">＋</button>
             </div>
             <div class="notes-list" id="notesList"></div>
           </div>
@@ -1005,7 +1040,14 @@
     <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
       <div class="modal">
         <div class="modal-title" id="modalTitle">Add Note</div>
-        <textarea id="modalTextarea" placeholder="Write your note here…"></textarea>
+        <div class="modal-field">
+          <label class="modal-label">Date</label>
+          <input type="date" id="modalDateInput" />
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Note</label>
+          <textarea id="modalTextarea" placeholder="Write your note here…"></textarea>
+        </div>
         <div class="modal-field">
           <label class="modal-label">Tag</label>
           <select id="modalTagSelect" class="styled-select" onchange="handleTagSelectChange()"></select>
@@ -1661,41 +1703,30 @@
         document.getElementById('undoBar').classList.remove('running');
       }
 
-      function addQuickNote() {
-        const inp=document.getElementById('quickNoteInput');
-        const text=inp.value.trim();
-        if (!text) return;
-        const tag  = document.getElementById('quickNoteTag').value;
-        const cost = document.getElementById('quickNoteCost').value.trim();
-        const iso  = dateToISO(new Date());
-        notes[iso] = {text, tag, cost, attachments:[]};
-        fbSave(iso, text, tag, cost, []);
-        cacheNotes();
-        inp.value  = '';
-        document.getElementById('quickNoteCost').value = '';
-        refreshAll();
-      }
-      document.getElementById('quickNoteInput').addEventListener('keydown', e => {
-        if (e.key==='Enter') addQuickNote();
-      });
 
       // ── MODAL ──
       function openModal(iso) {
         modalDate                = iso;
         modalPendingFiles        = [];
         modalExistingAttachments = (notes[iso] && notes[iso].attachments) ? [...notes[iso].attachments] : [];
-        document.getElementById('modalTitle').textContent = `Add Note for ${isoToDisplay(iso)}`;
-        const n=notes[iso];
-        document.getElementById('modalTextarea').value  = n ? n.text : '';
-        document.getElementById('modalCostInput').value = n ? (n.cost || '') : '';
+        const n = notes[iso];
+        const isEdit = !!n;
+        document.getElementById('modalTitle').textContent = isEdit ? 'Edit Note' : 'Add Note';
+        document.getElementById('modalDateInput').value   = iso;
+        document.getElementById('modalTextarea').value    = n ? n.text : '';
+        document.getElementById('modalCostInput').value   = n ? (n.cost || '') : '';
         populateTagSelect('modalTagSelect', n ? n.tag : '');
         document.getElementById('newTagRow').classList.remove('visible');
         document.getElementById('attachStatus').style.display = 'none';
         document.getElementById('modalSaveBtn').textContent = 'Save';
-        document.getElementById('modalSaveBtn').disabled = false;
+        document.getElementById('modalSaveBtn').disabled    = false;
         renderAttachPreviews();
         document.getElementById('modalBackdrop').classList.add('open');
         document.getElementById('modalTextarea').focus();
+      }
+
+      function openAddNoteModal() {
+        openModal(dateToISO(new Date()));
       }
 
       function closeModal() {
@@ -1733,13 +1764,21 @@
           }
         }
 
+        const saveIso    = document.getElementById('modalDateInput').value || modalDate;
         const attachments = modalExistingAttachments;
-        if (text || attachments.length || cost) {
-          notes[modalDate] = { text, tag, cost, attachments };
-          fbSave(modalDate, text, tag, cost, attachments);
-        } else {
+
+        // If date changed while editing, remove the old entry
+        if (modalDate && saveIso !== modalDate) {
           delete notes[modalDate];
           fbDelete(modalDate);
+        }
+
+        if (text || attachments.length || cost) {
+          notes[saveIso] = { text, tag, cost, attachments };
+          fbSave(saveIso, text, tag, cost, attachments);
+        } else {
+          delete notes[saveIso];
+          fbDelete(saveIso);
         }
         cacheNotes();
         refreshAll();
@@ -1758,7 +1797,6 @@
         loadLocalNotes();
         updateProgress();
         buildMonthDropdown();
-        populateTagSelect('quickNoteTag');
         renderCalendar();
         renderNotesList();
 
