@@ -1077,6 +1077,21 @@
       <div class="undo-bar" id="undoBar"></div>
     </div>
 
+    <!-- MILESTONE EDIT MODAL -->
+    <div class="modal-backdrop" id="milestoneBackdrop" onclick="handleMilestoneBackdropClick(event)">
+      <div class="modal" style="max-width:360px">
+        <div class="modal-title" id="milestoneName"></div>
+        <div class="modal-field">
+          <label class="modal-label">Date</label>
+          <input type="date" id="milestoneDateInput" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-cancel" onclick="closeMilestoneEdit()">Cancel</button>
+          <button class="btn" onclick="saveMilestoneDate()">Save</button>
+        </div>
+      </div>
+    </div>
+
     <!-- NOTE DETAIL MODAL -->
     <div class="modal-backdrop" id="detailBackdrop" onclick="handleDetailBackdropClick(event)">
       <div class="detail-modal">
@@ -1180,6 +1195,7 @@
       const REMINDER_RECIPIENTS  = ['ankit.konchady@gmail.com', 'schavan0507@gmail.com'];
       const REMINDER_SENT_KEY    = 'pregnancyReminderSentDate';
       const FIRESTORE_COLLECTION = 'pregnancy-notes';
+      const MILESTONE_DATES_KEY  = 'milestoneDates';
 
       firebase.initializeApp(FIREBASE_CONFIG);
       const db      = firebase.firestore();
@@ -1198,6 +1214,8 @@
       let pendingDelete            = null;
       let pendingDeleteTimer       = null;
       let detailIso               = null;
+      let milestoneDates          = {};
+      let editingMilestone        = null;
 
       // ── UTILITY ──
       function dateToISO(d) {
@@ -1397,14 +1415,19 @@
         ];
         const today = new Date(); today.setHours(0,0,0,0);
         const html = milestones.map(m => {
-          const date = addDays(START_DATE, m.day);
+          const defaultIso  = dateToISO(addDays(START_DATE, m.day));
+          const useIso      = milestoneDates[m.label] || defaultIso;
+          const date        = new Date(useIso + 'T00:00:00');
           const dStr = `${MONTH_NAMES[date.getMonth()].slice(0,3)} ${date.getDate()}, ${date.getFullYear()}`;
-          const diff = Math.round((date-today)/86400000);
+          const diff = Math.round((date - today) / 86400000);
           const cd   = diff===0?'Today!':diff<0?`${Math.abs(diff)} days ago`:`in ${diff} days`;
-          return `<div class="dates-item${diff<0?' past':''}">
+          const editedMark = milestoneDates[m.label]
+            ? `<span style="font-size:0.58rem;opacity:0.6;margin-left:4px">✎</span>` : '';
+          return `<div class="dates-item${diff<0?' past':''}" style="cursor:pointer"
+              onclick="openMilestoneEdit(${JSON.stringify(m.label)}, '${defaultIso}')">
             <span class="dates-item-icon">${m.icon}</span>
             <div>
-              <div class="dates-item-label">${m.label}</div>
+              <div class="dates-item-label">${m.label}${editedMark}</div>
               <div class="dates-item-date">${dStr}</div>
               <div class="dates-item-cd">${cd}</div>
             </div>
@@ -1758,6 +1781,38 @@
       }
 
 
+      // ── MILESTONE DATES ──
+      function loadMilestoneDates() {
+        try { milestoneDates = JSON.parse(localStorage.getItem(MILESTONE_DATES_KEY)) || {}; }
+        catch { milestoneDates = {}; }
+      }
+      function persistMilestoneDates() {
+        localStorage.setItem(MILESTONE_DATES_KEY, JSON.stringify(milestoneDates));
+      }
+      function openMilestoneEdit(label, defaultIso) {
+        editingMilestone = label;
+        document.getElementById('milestoneName').textContent = label;
+        document.getElementById('milestoneDateInput').value  = milestoneDates[label] || defaultIso;
+        document.getElementById('milestoneBackdrop').classList.add('open');
+        document.getElementById('milestoneDateInput').focus();
+      }
+      function closeMilestoneEdit() {
+        document.getElementById('milestoneBackdrop').classList.remove('open');
+        editingMilestone = null;
+      }
+      function saveMilestoneDate() {
+        const val = document.getElementById('milestoneDateInput').value;
+        if (editingMilestone && val) {
+          milestoneDates[editingMilestone] = val;
+          persistMilestoneDates();
+          if (activePanel === 'dates') renderPanel('dates');
+        }
+        closeMilestoneEdit();
+      }
+      function handleMilestoneBackdropClick(e) {
+        if (e.target === document.getElementById('milestoneBackdrop')) closeMilestoneEdit();
+      }
+
       // ── NOTE DETAIL ──
       function openNoteDetail(iso) {
         const n = notes[iso];
@@ -1891,12 +1946,13 @@
       }
 
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); }
+        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); closeMilestoneEdit(); }
       });
 
       // ── INIT ──
       async function init() {
         loadTags();
+        loadMilestoneDates();
         loadLocalNotes();
         updateProgress();
         buildMonthDropdown();
