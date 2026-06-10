@@ -494,6 +494,83 @@
       .note-text { font-size: 0.76rem; color: var(--text-secondary); word-break: break-word; }
       .notes-empty { font-size: 0.78rem; color: var(--text-secondary); text-align: center; padding: 12px; }
 
+      /* Cost badge */
+      .cost-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #4ade80;
+        background: rgba(74,222,128,0.12);
+        border: 1px solid rgba(74,222,128,0.3);
+        border-radius: 8px;
+        padding: 2px 8px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      /* Cost input wrapper (sidebar) */
+      .cost-input-row {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 6px;
+        transition: border-color 0.2s;
+      }
+      .cost-input-row:focus-within { border-color: var(--accent); }
+      .cost-prefix {
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        padding: 7px 8px;
+        border-right: 1px solid var(--border);
+        line-height: 1;
+        user-select: none;
+      }
+      .cost-input-row input {
+        flex: 1;
+        background: var(--bg-header);
+        border: none;
+        color: var(--text-primary);
+        padding: 7px 10px;
+        font-size: 0.8rem;
+        font-family: inherit;
+        outline: none;
+      }
+
+      /* Cost input in modal */
+      .modal-cost-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+        transition: border-color 0.2s;
+      }
+      .modal-cost-wrap:focus-within { border-color: var(--accent); }
+      .modal-cost-wrap .cost-prefix {
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+        font-size: 0.88rem;
+        padding: 9px 10px;
+        border-right: 1px solid var(--border);
+      }
+      .modal-cost-wrap input {
+        flex: 1;
+        background: var(--bg-section);
+        border: none;
+        color: var(--text-primary);
+        padding: 9px 12px;
+        font-size: 0.88rem;
+        font-family: inherit;
+        outline: none;
+      }
+
       /* ── BUTTONS ── */
       .btn {
         background: var(--accent);
@@ -805,6 +882,10 @@
                 <button class="btn btn-sm" onclick="addQuickNote()">Add</button>
               </div>
               <select id="quickNoteTag" class="styled-select"></select>
+              <div class="cost-input-row">
+                <span class="cost-prefix">₹</span>
+                <input type="number" id="quickNoteCost" placeholder="Cost (optional)" min="0" step="any" />
+              </div>
             </div>
             <div class="notes-list" id="notesList"></div>
           </div>
@@ -850,6 +931,13 @@
             <input type="text" id="newTagInput" placeholder="New tag name…"
                    onkeydown="if(event.key==='Enter')confirmNewTag()" />
             <button class="btn btn-sm" onclick="confirmNewTag()">Add</button>
+          </div>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Cost</label>
+          <div class="modal-cost-wrap">
+            <span class="cost-prefix">₹</span>
+            <input type="number" id="modalCostInput" placeholder="Enter amount (optional)" min="0" step="any" />
           </div>
         </div>
         <div class="modal-field">
@@ -959,6 +1047,12 @@
         const c = tagColor(tag);
         return `<span class="tag-pill" style="background:${c}22;color:${c};border-color:${c}66">${escapeHtml(tag)}</span>`;
       }
+      function costBadgeHtml(cost) {
+        if (!cost && cost !== 0) return '';
+        const num = parseFloat(cost);
+        if (isNaN(num)) return '';
+        return `<span class="cost-badge">₹${num.toLocaleString('en-IN')}</span>`;
+      }
 
       function populateTagSelect(id, selected) {
         const sel = document.getElementById(id);
@@ -995,9 +1089,9 @@
 
       // ── NOTES PERSISTENCE ──
       function migrateNote(v) {
-        if (!v) return { text:'', tag:'', attachments:[] };
-        if (typeof v === 'string') return { text:v, tag:'', attachments:[] };
-        return { text: v.text||'', tag: v.tag||'', attachments: v.attachments||[] };
+        if (!v) return { text:'', tag:'', cost:'', attachments:[] };
+        if (typeof v === 'string') return { text:v, tag:'', cost:'', attachments:[] };
+        return { text: v.text||'', tag: v.tag||'', cost: v.cost||'', attachments: v.attachments||[] };
       }
 
       function loadLocalNotes() {
@@ -1015,7 +1109,7 @@
           notes = {};
           snap.forEach(doc => {
             const d = doc.data();
-            notes[doc.id] = { text: d.text||'', tag: d.tag||'', attachments: d.attachments||[] };
+            notes[doc.id] = { text: d.text||'', tag: d.tag||'', cost: d.cost||'', attachments: d.attachments||[] };
           });
           cacheNotes();
         } catch(e) { console.warn('Firestore load failed:', e); }
@@ -1023,9 +1117,9 @@
 
       function cacheNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 
-      function fbSave(iso, text, tag, attachments) {
+      function fbSave(iso, text, tag, cost, attachments) {
         db.collection(FIRESTORE_COLLECTION).doc(iso).set({
-          text, tag: tag||'', date: iso,
+          text, tag: tag||'', cost: cost||'', date: iso,
           attachments: attachments||[],
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }).catch(e => console.warn('Firestore save failed:', e));
@@ -1136,6 +1230,7 @@
                 <div class="notes-panel-row">
                   <span class="notes-panel-date">${isoToDisplay(iso)}</span>
                   ${tagPillHtml(n.tag)}
+                  ${costBadgeHtml(n.cost)}
                   <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
                 </div>
                 <div class="notes-panel-text">${escapeHtml(n.text)}</div>
@@ -1168,6 +1263,7 @@
                 </div>
                 <div class="appt-right">
                   ${tagPillHtml(n.tag)}
+                  ${costBadgeHtml(n.cost)}
                   <div class="appt-text">${escapeHtml(n.text)}</div>
                 </div>
                 ${attachmentsHtml(n.attachments)}
@@ -1394,6 +1490,7 @@
             <div class="note-item-header">
               <span class="note-date">${isoToDisplay(iso)}</span>
               ${tagPillHtml(n.tag)}
+              ${costBadgeHtml(n.cost)}
               <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
             </div>
             <div class="note-text">${escapeHtml(n.text)}</div>
@@ -1419,12 +1516,14 @@
         const inp=document.getElementById('quickNoteInput');
         const text=inp.value.trim();
         if (!text) return;
-        const tag=document.getElementById('quickNoteTag').value;
-        const iso=dateToISO(new Date());
-        notes[iso]={text,tag,attachments:[]};
-        fbSave(iso,text,tag,[]);
+        const tag  = document.getElementById('quickNoteTag').value;
+        const cost = document.getElementById('quickNoteCost').value.trim();
+        const iso  = dateToISO(new Date());
+        notes[iso] = {text, tag, cost, attachments:[]};
+        fbSave(iso, text, tag, cost, []);
         cacheNotes();
-        inp.value='';
+        inp.value  = '';
+        document.getElementById('quickNoteCost').value = '';
         refreshAll();
       }
       document.getElementById('quickNoteInput').addEventListener('keydown', e => {
@@ -1438,7 +1537,8 @@
         modalExistingAttachments = (notes[iso] && notes[iso].attachments) ? [...notes[iso].attachments] : [];
         document.getElementById('modalTitle').textContent = `Add Note for ${isoToDisplay(iso)}`;
         const n=notes[iso];
-        document.getElementById('modalTextarea').value = n ? n.text : '';
+        document.getElementById('modalTextarea').value  = n ? n.text : '';
+        document.getElementById('modalCostInput').value = n ? (n.cost || '') : '';
         populateTagSelect('modalTagSelect', n ? n.tag : '');
         document.getElementById('newTagRow').classList.remove('visible');
         document.getElementById('attachStatus').style.display = 'none';
@@ -1460,6 +1560,7 @@
         const text   = document.getElementById('modalTextarea').value.trim();
         const tagVal = document.getElementById('modalTagSelect').value;
         const tag    = tagVal==='__new__' ? '' : tagVal;
+        const cost   = document.getElementById('modalCostInput').value.trim();
         if (!modalDate) return;
 
         const saveBtn  = document.getElementById('modalSaveBtn');
@@ -1484,9 +1585,9 @@
         }
 
         const attachments = modalExistingAttachments;
-        if (text || attachments.length) {
-          notes[modalDate] = { text, tag, attachments };
-          fbSave(modalDate, text, tag, attachments);
+        if (text || attachments.length || cost) {
+          notes[modalDate] = { text, tag, cost, attachments };
+          fbSave(modalDate, text, tag, cost, attachments);
         } else {
           delete notes[modalDate];
           fbDelete(modalDate);
