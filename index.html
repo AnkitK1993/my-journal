@@ -159,7 +159,6 @@
         margin-right: 4px;
       }
       .nav-home:hover { color: var(--accent); }
-      .nav-export { margin-left: auto; }
 
       /* ── PANEL DRAWER ── */
       .panel-drawer {
@@ -1486,8 +1485,8 @@
     <!-- TOP NAV -->
     <nav class="top-nav" onclick="handleNavClick(event)">
       <div class="top-nav-inner">
-        <button class="nav-tab nav-home" id="navHome" onclick="navigateTo('home')">
-          <svg class="icon"><use href="#i-home"/></svg> Home
+        <button class="nav-tab nav-home" id="navHome" onclick="navigateTo('home')" title="Home">
+          <svg class="icon"><use href="#i-home"/></svg>
         </button>
         <button class="nav-tab" id="navMeds" onclick="navigateTo('meds')">
           <svg class="icon"><use href="#i-pill"/></svg> Meds
@@ -1513,9 +1512,6 @@
             <button class="nav-dropdown-item" id="navAppointments" onclick="navigateTo('appointments')"><svg class="icon"><use href="#i-calendar"/></svg> Appointments</button>
           </div>
         </div>
-        <button class="nav-tab nav-export" onclick="exportNotes()" title="Download all data as JSON">
-          <svg class="icon"><use href="#i-download"/></svg> Export
-        </button>
       </div>
     </nav>
 
@@ -2071,7 +2067,7 @@
           document.getElementById('navHome').classList.add('active');
         } else {
           homeView.style.display = 'none';
-          pageView.style.display = '';
+          pageView.style.display = 'block';
           document.getElementById('navHome').classList.remove('active');
           document.getElementById('pageTitle').textContent = PAGE_META[page]?.title || page;
           const c = document.getElementById('pageContent');
@@ -2261,23 +2257,6 @@
         renderCalendar(true);
       }
 
-      function exportNotes() {
-        const payload = {
-          exportedAt: new Date().toISOString(),
-          startDate: dateToISO(START_DATE),
-          totalWeeks: TOTAL_WEEKS,
-          tags,
-          milestoneDates,
-          notes,
-        };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = `journal-export-${dateToISO(new Date())}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
 
       // Click ripple — node removed on animationend, nothing lingers
       function spawnRipple(e, el) {
