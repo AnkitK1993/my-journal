@@ -7,7 +7,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <style>
@@ -1313,8 +1312,7 @@
       const MILESTONE_DATES_KEY  = 'milestoneDates';
 
       firebase.initializeApp(FIREBASE_CONFIG);
-      const db      = firebase.firestore();
-      const storage = firebase.storage();
+      const db = firebase.firestore();
       emailjs.init(EMAILJS_CONFIG.publicKey);
 
       // ── STATE ──
@@ -1694,15 +1692,21 @@
         area.innerHTML = html;
       }
 
-      async function uploadPendingFiles(iso) {
-        if (!modalPendingFiles.length) return [];
+      const MAX_FILE_BYTES = 700 * 1024; // 700 KB per file
+
+      async function readFilesAsDataURLs(files) {
         const results = [];
-        for (const file of modalPendingFiles) {
-          const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-          const ref = storage.ref(`attachments/${iso}/${safeName}`);
-          const snap = await ref.put(file);
-          const url  = await snap.ref.getDownloadURL();
-          results.push({ name: file.name, url, type: file.type });
+        for (const file of files) {
+          if (file.size > MAX_FILE_BYTES) {
+            throw new Error(`"${file.name}" is larger than 700 KB. Please compress it and try again.`);
+          }
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload  = e => resolve(e.target.result);
+            reader.onerror = () => reject(new Error(`Could not read "${file.name}"`));
+            reader.readAsDataURL(file);
+          });
+          results.push({ name: file.name, type: file.type, url: dataUrl });
         }
         return results;
       }
@@ -2245,19 +2249,18 @@
         const statusEl = document.getElementById('attachStatus');
 
         if (modalPendingFiles.length) {
-          saveBtn.disabled = true;
-          saveBtn.textContent = 'Uploading…';
+          saveBtn.disabled    = true;
+          saveBtn.textContent = 'Processing…';
           statusEl.style.display = 'block';
-          statusEl.textContent   = `Uploading ${modalPendingFiles.length} file(s)…`;
+          statusEl.textContent   = `Reading ${modalPendingFiles.length} file(s)…`;
           try {
-            const uploaded = await uploadPendingFiles(modalDate);
-            modalExistingAttachments = [...modalExistingAttachments, ...uploaded];
+            const read = await readFilesAsDataURLs(modalPendingFiles);
+            modalExistingAttachments = [...modalExistingAttachments, ...read];
             modalPendingFiles = [];
           } catch(e) {
-            statusEl.textContent = 'Upload failed. Please try again.';
-            saveBtn.disabled = false;
+            statusEl.textContent = e.message || 'Could not read file. Please try again.';
+            saveBtn.disabled    = false;
             saveBtn.textContent = 'Save';
-            console.warn('Storage upload error:', e);
             return;
           }
         }
