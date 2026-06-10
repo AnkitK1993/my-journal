@@ -1222,6 +1222,219 @@
         .stat-tile-value { font-size: 1.3rem; }
       }
 
+      /* ── NAV GROUP / DROPDOWN ── */
+      .top-nav-inner { flex-wrap: nowrap; gap: 0; }
+      .nav-group { position: relative; }
+      .nav-group-btn { display: inline-flex; align-items: center; gap: 7px; }
+      .nav-caret { transition: transform 0.2s; }
+      .nav-group.open > .nav-group-btn .nav-caret { transform: rotate(90deg); }
+      .nav-dropdown {
+        position: absolute; top: 100%; left: 0;
+        background: var(--bg-header);
+        border: 1px solid var(--border-hot);
+        border-top: none;
+        border-radius: 0 0 3px 3px;
+        min-width: 190px; z-index: 500;
+        display: none; flex-direction: column;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+      }
+      .nav-group.open > .nav-dropdown { display: flex; animation: drawerIn 0.18s ease both; }
+      .nav-dropdown-item {
+        display: flex; align-items: center; gap: 9px;
+        background: none; border: none;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-family: var(--mono); font-size: 0.66rem;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+        padding: 12px 16px; cursor: pointer; white-space: nowrap;
+        transition: color 0.15s, background 0.15s; width: 100%; text-align: left;
+      }
+      .nav-dropdown-item:last-child { border-bottom: none; }
+      .nav-dropdown-item:hover { color: var(--accent); background: var(--accent-faint); }
+      .nav-dropdown-item.active { color: var(--accent); }
+
+      /* ── PAGE VIEW ── */
+      #homeView { display: block; }
+      #pageView  { display: none; }
+      .page-header {
+        display: flex; align-items: center; gap: 16px;
+        margin-bottom: 24px; padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-hot);
+      }
+      .page-back-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: transparent; color: var(--text-secondary);
+        border: 1px solid var(--border); border-radius: 2px;
+        padding: 8px 14px; font-family: var(--mono);
+        font-size: 0.66rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+        transition: border-color 0.15s, color 0.15s;
+      }
+      .page-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+      .page-title {
+        font-family: var(--display); font-size: 0.95rem;
+        font-weight: 800; color: var(--accent);
+        text-transform: uppercase; letter-spacing: 4px;
+        text-shadow: 0 0 14px var(--accent-dim); flex: 1;
+      }
+
+      /* ── DATES PAGE (full CRUD) ── */
+      .dates-page-toolbar {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .dates-page-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 12px;
+      }
+      .dates-page-card {
+        position: relative;
+        background: var(--bg-section); border: 1px solid var(--border);
+        border-left: 3px solid var(--cyan); border-radius: 0 3px 3px 0;
+        padding: 14px; display: flex; gap: 10px; align-items: flex-start;
+        transition: border-color 0.15s, transform 0.15s;
+      }
+      .dates-page-card:hover { border-color: var(--cyan); transform: translateX(2px); }
+      .dates-page-card.past { opacity: 0.55; }
+      .dates-page-card-info { flex: 1; min-width: 0; }
+      .dates-page-card-label { font-size: 0.7rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; }
+      .dates-page-card-date  { font-size: 0.74rem; color: var(--cyan); margin-top: 3px; }
+      .dates-page-card-cd    { font-size: 0.62rem; color: var(--text-secondary); margin-top: 2px; letter-spacing: 0.5px; }
+      .dates-page-card-btns  { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+
+      /* ── MEDS PAGE ── */
+      .meds-toolbar {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 20px;
+      }
+      .meds-grid { display: flex; flex-direction: column; gap: 16px; }
+      .med-card {
+        position: relative; background: var(--bg-container);
+        border: 1px solid var(--border); border-radius: 3px; padding: 18px;
+        transition: border-color 0.15s;
+      }
+      .med-card::before {
+        content: ''; position: absolute; top: -1px; left: -1px;
+        width: 12px; height: 12px;
+        border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan);
+      }
+      .med-card:hover { border-color: var(--border-hot); }
+      .med-card.inactive { opacity: 0.5; }
+      .med-card-header {
+        display: flex; align-items: flex-start;
+        justify-content: space-between; gap: 12px; margin-bottom: 12px;
+      }
+      .med-card-name {
+        font-family: var(--display); font-size: 0.88rem;
+        font-weight: 800; color: var(--cyan);
+        letter-spacing: 2px; text-transform: uppercase;
+      }
+      .med-card-range { font-size: 0.66rem; color: var(--text-secondary); margin-top: 4px; letter-spacing: 0.5px; }
+      .med-card-status { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+      .med-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+      .med-timings-section { border-top: 1px dashed var(--border); padding-top: 12px; }
+      .med-timings-label {
+        font-size: 0.6rem; font-weight: 700; color: var(--text-secondary);
+        text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;
+      }
+      .med-timing-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 8px 0; border-bottom: 1px solid var(--border);
+      }
+      .med-timing-row:last-child { border-bottom: none; }
+      .med-timing-time {
+        font-family: var(--display); font-size: 0.82rem;
+        font-weight: 700; color: var(--text-primary); min-width: 64px;
+      }
+      .med-timing-status { flex: 1; }
+      .timing-done {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 0.65rem; font-weight: 700;
+        color: var(--accent); text-transform: uppercase; letter-spacing: 1px;
+      }
+      .timing-overdue {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 0.65rem; font-weight: 700;
+        color: var(--delete-color); text-transform: uppercase; letter-spacing: 1px;
+      }
+      .timing-upcoming { font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+      .btn-mark-done {
+        background: var(--accent-faint); color: var(--accent);
+        border: 1px solid var(--accent-dim); border-radius: 2px;
+        padding: 4px 10px; font-size: 0.62rem; font-weight: 700;
+        font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px;
+        cursor: pointer; transition: background 0.15s, box-shadow 0.15s; flex-shrink: 0;
+      }
+      .btn-mark-done:hover { background: rgba(0,255,157,0.15); box-shadow: 0 0 10px rgba(0,255,157,0.15); }
+      .btn-take-now {
+        background: rgba(255,77,77,0.12); color: var(--delete-color);
+        border: 1px solid rgba(255,77,77,0.5); border-radius: 2px;
+        padding: 4px 10px; font-size: 0.62rem; font-weight: 700;
+        font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px;
+        cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+      }
+      .btn-take-now:hover { background: rgba(255,77,77,0.2); }
+
+      /* Meds add/edit modal timings */
+      .med-timing-input-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+      .med-timing-input-row input[type="time"] {
+        background: var(--bg-section); border: 1px solid var(--border);
+        border-radius: 2px; color: var(--text-primary);
+        padding: 7px 10px; font-size: 0.82rem; font-family: var(--mono);
+        outline: none; color-scheme: dark; transition: border-color 0.15s; flex: 1;
+      }
+      .med-timing-input-row input[type="time"]:focus { border-color: var(--accent); }
+      .btn-remove-timing {
+        background: none; border: 1px solid rgba(255,77,77,0.4);
+        border-radius: 2px; color: var(--delete-color);
+        width: 28px; height: 28px; display: flex; align-items: center;
+        justify-content: center; cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+      }
+      .btn-remove-timing:hover { background: rgba(255,77,77,0.1); }
+      .btn-add-timing {
+        background: none; border: 1px dashed var(--border-hot);
+        border-radius: 2px; color: var(--text-secondary);
+        padding: 7px 14px; font-family: var(--mono); font-size: 0.66rem;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+        cursor: pointer; transition: border-color 0.15s, color 0.15s;
+        margin-top: 4px; width: 100%;
+      }
+      .btn-add-timing:hover { border-color: var(--accent); color: var(--accent); }
+
+      /* ── NOTES / HISTORY / TAGS pages (reuse panel styles) ── */
+      .page-section-title {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 0.7rem; font-weight: 800; color: var(--accent);
+        text-transform: uppercase; letter-spacing: 3px; margin-bottom: 14px;
+      }
+      .page-toolbar {
+        display: flex; align-items: center; gap: 14px;
+        flex-wrap: wrap; margin-bottom: 16px;
+      }
+      .page-empty { color: var(--text-secondary); font-size: 0.74rem; padding: 40px 20px; text-align: center; letter-spacing: 1px; }
+
+      /* enhanced note indicator on calendar */
+      .note-indicator { position: absolute; bottom: 3px; right: 4px; color: var(--accent); line-height: 1; }
+      .note-indicator .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--accent); display: inline-block;
+        box-shadow: 0 0 6px var(--accent);
+      }
+
+      /* ── MODAL for meds / milestone (shared extended fields) ── */
+      .modal input[type="text"],
+      .modal input[type="time"],
+      .modal input[type="number"] {
+        width: 100%; background: var(--bg-section); border: 1px solid var(--border);
+        border-radius: 2px; color: var(--text-primary); padding: 9px 12px;
+        font-size: 0.84rem; font-family: var(--mono); outline: none;
+        transition: border-color 0.15s;
+      }
+      .modal input[type="text"]:focus,
+      .modal input[type="time"]:focus,
+      .modal input[type="number"]:focus { border-color: var(--accent); }
+
       /* ── ACCESSIBILITY: kill all motion if user prefers ── */
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -1257,6 +1470,11 @@
         <g id="i-plus-square"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></g>
         <g id="i-trash"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></g>
         <g id="i-layers2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></g>
+        <g id="i-check"><polyline points="20 6 9 17 4 12"/></g>
+        <g id="i-bell"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></g>
+        <g id="i-x"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></g>
+        <g id="i-pill"><rect x="7" y="2" width="10" height="20" rx="5"/><line x1="7" y1="12" x2="17" y2="12"/></g>
+        <g id="i-chev-d"><polyline points="6 9 12 15 18 9"/></g>
       </defs>
     </svg>
 
@@ -1266,23 +1484,43 @@
     </header>
 
     <!-- TOP NAV -->
-    <nav class="top-nav">
+    <nav class="top-nav" onclick="handleNavClick(event)">
       <div class="top-nav-inner">
-        <button class="nav-tab nav-home" onclick="goHome()"><svg class="icon"><use href="#i-home"/></svg> Home</button>
-        <button class="nav-tab" data-panel="dates"        onclick="togglePanel('dates')"><svg class="icon"><use href="#i-star"/></svg> Important Dates</button>
-        <button class="nav-tab" data-panel="notes"        onclick="togglePanel('notes')"><svg class="icon"><use href="#i-edit"/></svg> Notes</button>
-        <button class="nav-tab" data-panel="appointments" onclick="togglePanel('appointments')"><svg class="icon"><use href="#i-calendar"/></svg> Upcoming Appointments</button>
-        <button class="nav-tab" data-panel="tags"         onclick="togglePanel('tags')"><svg class="icon"><use href="#i-tag"/></svg> Tags</button>
-        <button class="nav-tab" data-panel="history"      onclick="togglePanel('history')"><svg class="icon"><use href="#i-list"/></svg> History</button>
-        <button class="nav-tab nav-export" onclick="exportNotes()" title="Download all data as JSON"><svg class="icon"><use href="#i-download"/></svg> Export</button>
+        <button class="nav-tab nav-home" id="navHome" onclick="navigateTo('home')">
+          <svg class="icon"><use href="#i-home"/></svg> Home
+        </button>
+        <button class="nav-tab" id="navMeds" onclick="navigateTo('meds')">
+          <svg class="icon"><use href="#i-pill"/></svg> Meds
+        </button>
+        <div class="nav-group" id="navGroupJournal">
+          <button class="nav-tab nav-group-btn" onclick="toggleNavDropdown('journal')">
+            <svg class="icon"><use href="#i-edit"/></svg> Journal
+            <svg class="icon nav-caret" style="width:9px;height:9px"><use href="#i-chev-d"/></svg>
+          </button>
+          <div class="nav-dropdown" id="navdrop-journal">
+            <button class="nav-dropdown-item" id="navNotes"   onclick="navigateTo('notes')"><svg class="icon"><use href="#i-edit"/></svg> Notes</button>
+            <button class="nav-dropdown-item" id="navHistory" onclick="navigateTo('history')"><svg class="icon"><use href="#i-list"/></svg> History</button>
+            <button class="nav-dropdown-item" id="navTags"    onclick="navigateTo('tags')"><svg class="icon"><use href="#i-tag"/></svg> Tags</button>
+          </div>
+        </div>
+        <div class="nav-group" id="navGroupTracker">
+          <button class="nav-tab nav-group-btn" onclick="toggleNavDropdown('tracker')">
+            <svg class="icon"><use href="#i-calendar"/></svg> Tracker
+            <svg class="icon nav-caret" style="width:9px;height:9px"><use href="#i-chev-d"/></svg>
+          </button>
+          <div class="nav-dropdown" id="navdrop-tracker">
+            <button class="nav-dropdown-item" id="navDates"        onclick="navigateTo('dates')"><svg class="icon"><use href="#i-star"/></svg> Important Dates</button>
+            <button class="nav-dropdown-item" id="navAppointments" onclick="navigateTo('appointments')"><svg class="icon"><use href="#i-calendar"/></svg> Appointments</button>
+          </div>
+        </div>
+        <button class="nav-tab nav-export" onclick="exportNotes()" title="Download all data as JSON">
+          <svg class="icon"><use href="#i-download"/></svg> Export
+        </button>
       </div>
     </nav>
 
-    <!-- PANEL DRAWER -->
-    <div class="panel-drawer" id="panelDrawer">
-      <div class="panel-content" id="panelContent"></div>
-    </div>
-
+    <!-- HOME VIEW -->
+    <div id="homeView">
     <div class="wrapper">
 
       <!-- STAT STRIP -->
@@ -1366,6 +1604,20 @@
         </aside>
       </div>
 
+    </div><!-- /.wrapper -->
+    </div><!-- /#homeView -->
+
+    <!-- PAGE VIEW -->
+    <div id="pageView">
+      <div class="wrapper">
+        <div class="page-header">
+          <button class="page-back-btn" onclick="navigateTo('home')">
+            <svg class="icon"><use href="#i-chev-l"/></svg> Back
+          </button>
+          <div class="page-title" id="pageTitle"></div>
+        </div>
+        <div id="pageContent"></div>
+      </div>
     </div>
 
     <!-- UNDO TOAST -->
@@ -1375,17 +1627,35 @@
       <div class="undo-bar" id="undoBar"></div>
     </div>
 
-    <!-- MILESTONE EDIT MODAL -->
+    <!-- MILESTONE ADD/EDIT MODAL -->
     <div class="modal-backdrop" id="milestoneBackdrop" onclick="handleMilestoneBackdropClick(event)">
-      <div class="modal" style="max-width:360px">
+      <div class="modal" style="max-width:380px">
         <div class="modal-title" id="milestoneName"></div>
+        <div class="modal-field" id="milestoneLabelRow">
+          <label class="modal-label">Label</label>
+          <input type="text" id="milestoneLabelInput" placeholder="e.g. Growth Scan…" />
+        </div>
+        <div class="modal-field" id="milestoneIconRow">
+          <label class="modal-label">Icon</label>
+          <select id="milestoneIconSelect" class="styled-select">
+            <option value="i-target">Target</option>
+            <option value="i-scan">Scan</option>
+            <option value="i-camera">Camera</option>
+            <option value="i-syringe">Syringe</option>
+            <option value="i-plus-square">Plus</option>
+            <option value="i-star">Star</option>
+            <option value="i-calendar">Calendar</option>
+            <option value="i-clock">Clock</option>
+            <option value="i-activity">Activity</option>
+          </select>
+        </div>
         <div class="modal-field">
           <label class="modal-label">Date</label>
           <input type="date" id="milestoneDateInput" />
         </div>
         <div class="modal-actions">
           <button class="btn btn-cancel" onclick="closeMilestoneEdit()">Cancel</button>
-          <button class="btn" onclick="saveMilestoneDate()">Save</button>
+          <button class="btn" onclick="saveMilestoneEdit()">Save</button>
         </div>
       </div>
     </div>
@@ -1473,6 +1743,49 @@
       </div>
     </div>
 
+    <!-- MED ADD/EDIT MODAL -->
+    <div class="modal-backdrop" id="medModalBackdrop" onclick="handleMedModalBackdropClick(event)">
+      <div class="modal" style="max-width:420px">
+        <div class="modal-title" id="medModalTitle">Add Medication</div>
+        <div class="modal-field">
+          <label class="modal-label">Medication Name</label>
+          <input type="text" id="medNameInput" placeholder="e.g. Folic Acid 5mg…" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="modal-field">
+            <label class="modal-label">Start Date</label>
+            <input type="date" id="medStartInput" />
+          </div>
+          <div class="modal-field">
+            <label class="modal-label">End Date</label>
+            <input type="date" id="medEndInput" />
+          </div>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Daily Timings</label>
+          <div id="medTimingsContainer"></div>
+          <button class="btn-add-timing" onclick="addMedTimingInput()">＋ Add Timing</button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-cancel" onclick="closeMedModal()">Cancel</button>
+          <button class="btn" onclick="saveMedModal()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MED ALERT MODAL -->
+    <div class="modal-backdrop" id="medAlertBackdrop">
+      <div class="modal" style="max-width:360px;text-align:center;gap:18px">
+        <div style="font-size:2rem;color:var(--delete-color)">⚠</div>
+        <div class="modal-title" style="color:var(--delete-color);text-align:center">Missed Medication</div>
+        <div id="medAlertBody" style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7"></div>
+        <div class="modal-actions" style="justify-content:center;gap:12px">
+          <button class="btn btn-cancel" onclick="closeMedAlert()">Dismiss</button>
+          <button class="btn" onclick="goToMedsFromAlert()">Take Me There</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       // ── CONSTANTS ──
       const START_DATE   = new Date(2026, 4, 5);
@@ -1504,6 +1817,17 @@
       const REMINDER_SENT_KEY    = 'pregnancyReminderSentDate';
       const FIRESTORE_COLLECTION = 'pregnancy-notes';
       const MILESTONE_DATES_KEY  = 'milestoneDates';
+      const MILESTONES_KEY       = 'journalMilestones';
+      const MEDS_KEY             = 'journalMeds';
+      const MEDS_DONE_KEY        = 'journalMedsDone';
+      const ALERTS_SHOWN_KEY     = 'journalMedAlertsShown';
+      const DEFAULT_MILESTONES = [
+        { icon:'i-target',      label:'Due Date',         day:280 },
+        { icon:'i-scan',        label:'1st Ultrasound',   day:56  },
+        { icon:'i-camera',      label:'2nd Anatomy Scan', day:119 },
+        { icon:'i-syringe',     label:'3rd Checkup',      day:182 },
+        { icon:'i-plus-square', label:'Final Ultrasound', day:259 },
+      ];
       firebase.initializeApp(FIREBASE_CONFIG);
       const db = firebase.firestore();
       emailjs.init(EMAILJS_CONFIG.publicKey);
@@ -1512,17 +1836,26 @@
       // notes[iso] = { text: string, tag: string, cost: string, visitNum: number|null }
       let notes       = {};
       let tags        = [];
-      let tagCounts   = {};  // { tagName: usageCount }
-      let activePanel = null;
+      let tagCounts   = {};
       let modalDate   = null;
       let pendingDelete            = null;
       let pendingDeleteTimer       = null;
       let detailIso               = null;
       let milestoneDates          = {};
-      let editingMilestone        = null;
-      let editingTag              = null;  // null = add new, string = rename existing
+      let milestones              = [];
+      let editingMilestone        = null; // null = add new, string id = edit existing
+      let editingTag              = null;
       let tagDeletePending        = null;
       let tagDeleteTimer          = null;
+      // page routing
+      let currentPage = 'home';
+      // meds
+      let meds             = [];
+      let medDone          = {};
+      let editingMedId     = null;
+      let shownAlertsToday = new Set();
+      let medAlertQueue    = [];
+      let medAlertInterval = null;
 
       // ── UTILITY ──
       function dateToISO(d) {
@@ -1716,89 +2049,125 @@
         }
       }
 
-      // ── HOME ──
-      function goHome() {
-        if (activePanel) {
-          activePanel = null;
-          document.getElementById('panelDrawer').classList.remove('open');
-          document.querySelectorAll('.nav-tab[data-panel]').forEach(t => t.classList.remove('active'));
+      // ── NAV ROUTING ──
+      const PAGE_META = {
+        home:         { title: null },
+        meds:         { title: 'Medications',        navId: 'navMeds' },
+        notes:        { title: 'Notes',              navId: 'navNotes' },
+        history:      { title: 'History',            navId: 'navHistory' },
+        tags:         { title: 'Tags',               navId: 'navTags' },
+        dates:        { title: 'Important Dates',    navId: 'navDates' },
+        appointments: { title: 'Appointments',       navId: 'navAppointments' },
+      };
+
+      function navigateTo(page) {
+        closeAllNavDropdowns();
+        currentPage = page;
+        const homeView = document.getElementById('homeView');
+        const pageView = document.getElementById('pageView');
+        if (page === 'home') {
+          homeView.style.display = '';
+          pageView.style.display = 'none';
+          document.getElementById('navHome').classList.add('active');
+        } else {
+          homeView.style.display = 'none';
+          pageView.style.display = '';
+          document.getElementById('navHome').classList.remove('active');
+          document.getElementById('pageTitle').textContent = PAGE_META[page]?.title || page;
+          const c = document.getElementById('pageContent');
+          if (page === 'meds')         renderMedsPage(c);
+          else if (page === 'dates')   renderDatesPage(c);
+          else if (page === 'notes')   renderNotesPage(c);
+          else if (page === 'appointments') renderApptsPage(c);
+          else if (page === 'tags')    renderTagsPage(c);
+          else if (page === 'history') renderHistoryPage(c);
         }
+        updateNavActive();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
-      // ── TOP NAV PANELS ──
-      function togglePanel(panelId) {
-        const drawer = document.getElementById('panelDrawer');
-        if (activePanel === panelId) {
-          activePanel = null;
-          drawer.classList.remove('open');
-          document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      function updateNavActive() {
+        document.querySelectorAll('.nav-tab, .nav-dropdown-item').forEach(el => el.classList.remove('active'));
+        if (currentPage === 'home') {
+          document.getElementById('navHome').classList.add('active');
           return;
         }
-        activePanel = panelId;
-        document.querySelectorAll('.nav-tab').forEach(t =>
-          t.classList.toggle('active', t.dataset.panel === panelId)
-        );
-        drawer.classList.add('open');
-        renderPanel(panelId);
+        const navId = PAGE_META[currentPage]?.navId;
+        if (navId) document.getElementById(navId)?.classList.add('active');
       }
 
-      function renderPanel(id) {
-        const c = document.getElementById('panelContent');
-        if (id === 'dates')             renderDatesPanel(c);
-        else if (id === 'notes')        renderNotesPanel(c);
-        else if (id === 'appointments') renderApptsPanel(c);
-        else if (id === 'tags')         renderTagsPanel(c);
-        else if (id === 'history')      renderHistoryPanel(c);
+      function toggleNavDropdown(group) {
+        const el = document.getElementById('navGroup' + group.charAt(0).toUpperCase() + group.slice(1));
+        if (!el) return;
+        const isOpen = el.classList.contains('open');
+        closeAllNavDropdowns();
+        if (!isOpen) el.classList.add('open');
       }
 
-      function renderDatesPanel(c) {
-        const milestones = [
-          { icon:'i-target',      label:'Due Date',          day:280 },
-          { icon:'i-scan',        label:'1st Ultrasound',    day:56  },
-          { icon:'i-camera',      label:'2nd Anatomy Scan',  day:119 },
-          { icon:'i-syringe',     label:'3rd Checkup',       day:182 },
-          { icon:'i-plus-square', label:'Final Ultrasound',  day:259 },
-        ];
+      function closeAllNavDropdowns() {
+        document.querySelectorAll('.nav-group.open').forEach(g => g.classList.remove('open'));
+      }
+
+      function handleNavClick(e) {
+        // close dropdowns when clicking outside a .nav-group
+        if (!e.target.closest('.nav-group')) closeAllNavDropdowns();
+      }
+
+      // close dropdowns on outside click
+      document.addEventListener('click', e => {
+        if (!e.target.closest('.top-nav')) closeAllNavDropdowns();
+      });
+
+      function renderDatesPage(c) {
         const today = new Date(); today.setHours(0,0,0,0);
-        const html = milestones.map(m => {
-          const defaultIso  = dateToISO(addDays(START_DATE, m.day));
-          const useIso      = milestoneDates[m.label] || defaultIso;
-          const date        = new Date(useIso + 'T00:00:00');
+        const cards = milestones.map(m => {
+          const date = new Date(m.date + 'T00:00:00');
           const dStr = `${MONTH_NAMES[date.getMonth()].slice(0,3)} ${date.getDate()}, ${date.getFullYear()}`;
           const diff = Math.round((date - today) / 86400000);
           const cd   = diff===0?'Today!':diff<0?`${Math.abs(diff)} days ago`:`in ${diff} days`;
-          const editedMark = milestoneDates[m.label]
-            ? `<span style="font-size:0.58rem;opacity:0.6;margin-left:4px">✎</span>` : '';
-          return `<div class="dates-item${diff<0?' past':''}" style="cursor:pointer"
-              onclick="openMilestoneEdit(${JSON.stringify(m.label)}, '${defaultIso}')">
-            <span class="dates-item-icon"><svg class="icon"><use href="#${m.icon}"/></svg></span>
-            <div>
-              <div class="dates-item-label">${m.label}${editedMark}</div>
-              <div class="dates-item-date">${dStr}</div>
-              <div class="dates-item-cd">${cd}</div>
+          return `<div class="dates-page-card${diff<0?' past':''}">
+            <span style="color:var(--cyan);line-height:1;margin-top:2px;flex-shrink:0">
+              <svg class="icon" style="width:17px;height:17px"><use href="#${m.icon}"/></svg>
+            </span>
+            <div class="dates-page-card-info">
+              <div class="dates-page-card-label">${escapeHtml(m.label)}</div>
+              <div class="dates-page-card-date">${dStr}</div>
+              <div class="dates-page-card-cd">${cd}</div>
+            </div>
+            <div class="dates-page-card-btns">
+              <button class="btn-icon" onclick="openMilestoneEdit(${JSON.stringify(m.id)})">
+                <svg class="icon"><use href="#i-edit"/></svg>
+              </button>
+              <button class="btn-icon btn-del" onclick="deleteMilestone(${JSON.stringify(m.id)})">
+                <svg class="icon"><use href="#i-trash"/></svg>
+              </button>
             </div>
           </div>`;
-        }).join('');
-        c.innerHTML = `<div class="panel-section-title">⭐ Important Dates</div>
-          <div class="dates-grid">${html}</div>`;
+        }).join('') || '<div class="page-empty">No milestones. Add one below.</div>';
+
+        c.innerHTML = `
+          <div class="dates-page-toolbar">
+            <span style="font-size:0.7rem;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase">${milestones.length} milestone${milestones.length!==1?'s':''}</span>
+            <button class="btn btn-sm" onclick="openAddMilestone()">＋ Add Milestone</button>
+          </div>
+          <div class="dates-page-grid">${cards}</div>`;
       }
 
-      function renderNotesPanel(c, filterTag) {
+      function renderNotesPage(c, filterTag) {
         filterTag = filterTag || '';
         const entries = Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0]));
         const allTags = [...new Set(entries.map(([,n]) => n.tag).filter(Boolean))];
 
         const filterBtns = [
-          `<button class="filter-btn${!filterTag?' active':''}" onclick="renderNotesPanel(document.getElementById('panelContent'),'')">All</button>`,
+          `<button class="filter-btn${!filterTag?' active':''}" onclick="renderNotesPage(document.getElementById('pageContent'),'')">All</button>`,
           ...allTags.map(t =>
-            `<button class="filter-btn${t===filterTag?' active':''}" onclick="renderNotesPanel(document.getElementById('panelContent'),${JSON.stringify(t)})">${escapeHtml(t)}</button>`
+            `<button class="filter-btn${t===filterTag?' active':''}" onclick="renderNotesPage(document.getElementById('pageContent'),${JSON.stringify(t)})">${escapeHtml(t)}</button>`
           )
         ].join('');
 
         const shown = filterTag ? entries.filter(([,n]) => n.tag===filterTag) : entries;
         const items = shown.length===0
-          ? '<div class="panel-empty">No notes found.</div>'
+          ? `<div class="page-empty">No notes found.</div>`
           : `<div class="notes-panel-grid">${shown.map(([iso,n]) => {
               const bc = n.tag ? tagColor(n.tag) : 'var(--border)';
               return `<div class="notes-panel-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}')">
@@ -1810,13 +2179,13 @@
               </div>`;
             }).join('')}</div>`;
 
-        c.innerHTML = `<div class="panel-header">
-            <div class="panel-section-title">📝 All Notes</div>
+        c.innerHTML = `<div class="page-toolbar">
             <div class="filter-bar">${filterBtns}</div>
+            <button class="btn btn-sm" style="margin-left:auto" onclick="openAddNoteModal()">＋ Add Note</button>
           </div>${items}`;
       }
 
-      function renderApptsPanel(c) {
+      function renderApptsPage(c) {
         const today = new Date(); today.setHours(0,0,0,0);
         const todayISO = dateToISO(today);
         const upcoming = Object.entries(notes)
@@ -1824,7 +2193,7 @@
           .sort((a,b) => a[0].localeCompare(b[0]));
 
         const items = upcoming.length===0
-          ? '<div class="panel-empty">No upcoming appointments.</div>'
+          ? `<div class="page-empty">No upcoming appointments.</div>`
           : `<div class="appts-list">${upcoming.map(([iso,n]) => {
               const diff = Math.round((new Date(iso+'T00:00:00')-today)/86400000);
               const cd   = diff===0?'Today':`in ${diff} day${diff!==1?'s':''}`;
@@ -1841,7 +2210,7 @@
               </div>`;
             }).join('')}</div>`;
 
-        c.innerHTML = `<div class="panel-section-title">📅 Upcoming Appointments</div>${items}`;
+        c.innerHTML = items;
       }
 
       // ── CALENDAR ──
@@ -1981,7 +2350,7 @@
             const iso=dateToISO(cd);
             if (notes[iso]) {
               const ind=document.createElement('div'); ind.className='note-indicator';
-              ind.innerHTML='<svg class="icon"><use href="#i-edit"/></svg>';
+              ind.innerHTML='<span class="dot"></span>';
               cell.appendChild(ind);
             }
 
@@ -2050,8 +2419,10 @@
         recomputeTagCounts();
         renderNotesList();
         renderCalendar();
-        if (activePanel === 'history') applyHistoryFilters();
-        else if (activePanel) renderPanel(activePanel);
+        if (currentPage !== 'home') {
+          const c = document.getElementById('pageContent');
+          if (c) navigateTo(currentPage);
+        }
       }
 
       function deleteNote(iso) {
@@ -2103,7 +2474,8 @@
       }
 
 
-      // ── HISTORY PANEL ──
+      // ── HISTORY PAGE ──
+      function renderHistoryPage(c) { renderHistoryPanel(c); }
       function renderHistoryPanel(c) {
         const tagOpts = ['<option value="">All Tags</option>',
           ...tags.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`)
@@ -2148,10 +2520,8 @@
           </div>
           <div id="historyResults"></div>`;
 
-        // Restore filter values
-        if (prev.tag)     document.getElementById('hFilterTag').value     = prev.tag;
-        if (prev.hasCost) document.getElementById('hFilterCost').value    = prev.hasCost;
-
+        if (prev.tag)     document.getElementById('hFilterTag').value  = prev.tag;
+        if (prev.hasCost) document.getElementById('hFilterCost').value = prev.hasCost;
         applyHistoryFilters();
       }
 
@@ -2216,6 +2586,7 @@
       }
 
       // ── TAG MANAGEMENT ──
+      function renderTagsPage(c) { renderTagsPanel(c); }
       function renderTagsPanel(c) {
         const addBtn = `<button class="btn btn-sm" onclick="openTagEditor(null)">＋ Add Tag</button>`;
         if (!tags.length) {
@@ -2290,17 +2661,17 @@
         closeTagEditor();
         recomputeTagCounts();
         renderNotesList();
-        if (activePanel === 'tags') renderPanel('tags');
+        if (currentPage === 'tags') navigateTo('tags');
       }
 
       function promptDeleteTag(tag) {
         if (tagDeleteTimer) clearTimeout(tagDeleteTimer);
         tagDeletePending = tag;
-        if (activePanel === 'tags') renderPanel('tags');
+        if (currentPage === 'tags') navigateTo('tags');
         tagDeleteTimer = setTimeout(() => {
           tagDeletePending = null;
           tagDeleteTimer   = null;
-          if (activePanel === 'tags') renderPanel('tags');
+          if (currentPage === 'tags') navigateTo('tags');
         }, 2500);
       }
 
@@ -2311,7 +2682,6 @@
         const idx = tags.indexOf(tag);
         if (idx > -1) tags.splice(idx, 1);
         saveTags();
-        // Strip tag from notes
         Object.keys(notes).forEach(iso => {
           if (notes[iso].tag === tag) {
             notes[iso] = { ...notes[iso], tag: '', visitNum: null };
@@ -2321,40 +2691,312 @@
         cacheNotes();
         recomputeTagCounts();
         renderNotesList();
-        if (activePanel === 'tags') renderPanel('tags');
+        if (currentPage === 'tags') navigateTo('tags');
       }
 
-      // ── MILESTONE DATES ──
-      function loadMilestoneDates() {
-        try { milestoneDates = JSON.parse(localStorage.getItem(MILESTONE_DATES_KEY)) || {}; }
-        catch { milestoneDates = {}; }
+      // ── MILESTONE CRUD ──
+      function loadMilestones() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(MILESTONES_KEY));
+          if (stored && stored.length > 0) {
+            milestones = stored;
+          } else {
+            // Migrate from old system or build from defaults
+            const oldDates = JSON.parse(localStorage.getItem(MILESTONE_DATES_KEY)) || {};
+            milestones = DEFAULT_MILESTONES.map((d, i) => ({
+              id:    'default-' + i,
+              label: d.label,
+              date:  oldDates[d.label] || dateToISO(addDays(START_DATE, d.day)),
+              icon:  d.icon,
+            }));
+            saveMilestones();
+          }
+        } catch { milestones = []; }
+        syncMilestoneDatesCache();
       }
-      function persistMilestoneDates() {
+      function saveMilestones() {
+        localStorage.setItem(MILESTONES_KEY, JSON.stringify(milestones));
+        syncMilestoneDatesCache();
+      }
+      function syncMilestoneDatesCache() {
+        milestoneDates = {};
+        milestones.forEach(m => { milestoneDates[m.label] = m.date; });
         localStorage.setItem(MILESTONE_DATES_KEY, JSON.stringify(milestoneDates));
       }
-      function openMilestoneEdit(label, defaultIso) {
-        editingMilestone = label;
-        document.getElementById('milestoneName').textContent = label;
-        document.getElementById('milestoneDateInput').value  = milestoneDates[label] || defaultIso;
+      // kept for backward compat in updateProgress
+      function loadMilestoneDates() { loadMilestones(); }
+      function persistMilestoneDates() { saveMilestones(); }
+
+      function openAddMilestone() {
+        editingMilestone = null;
+        document.getElementById('milestoneName').textContent = 'Add Milestone';
+        document.getElementById('milestoneLabelInput').value = '';
+        document.getElementById('milestoneIconSelect').value = 'i-star';
+        document.getElementById('milestoneDateInput').value  = dateToISO(new Date());
+        document.getElementById('milestoneLabelRow').style.display = '';
+        document.getElementById('milestoneIconRow').style.display  = '';
+        document.getElementById('milestoneBackdrop').classList.add('open');
+        document.getElementById('milestoneLabelInput').focus();
+      }
+
+      function openMilestoneEdit(id) {
+        const m = milestones.find(x => x.id === id);
+        if (!m) return;
+        editingMilestone = id;
+        document.getElementById('milestoneName').textContent  = 'Edit Milestone';
+        document.getElementById('milestoneLabelInput').value  = m.label;
+        document.getElementById('milestoneIconSelect').value  = m.icon;
+        document.getElementById('milestoneDateInput').value   = m.date;
+        document.getElementById('milestoneLabelRow').style.display = '';
+        document.getElementById('milestoneIconRow').style.display  = '';
         document.getElementById('milestoneBackdrop').classList.add('open');
         document.getElementById('milestoneDateInput').focus();
       }
+
       function closeMilestoneEdit() {
         document.getElementById('milestoneBackdrop').classList.remove('open');
         editingMilestone = null;
       }
-      function saveMilestoneDate() {
-        const val = document.getElementById('milestoneDateInput').value;
-        if (editingMilestone && val) {
-          milestoneDates[editingMilestone] = val;
-          persistMilestoneDates();
-          updateProgress();
-          if (activePanel === 'dates') renderPanel('dates');
+
+      function saveMilestoneEdit() {
+        const label = document.getElementById('milestoneLabelInput').value.trim();
+        const icon  = document.getElementById('milestoneIconSelect').value;
+        const date  = document.getElementById('milestoneDateInput').value;
+        if (!date) return;
+        if (editingMilestone === null) {
+          // Add new
+          if (!label) { alert('Please enter a label.'); return; }
+          milestones.push({ id: 'custom-' + Date.now(), label, date, icon });
+        } else {
+          const m = milestones.find(x => x.id === editingMilestone);
+          if (m) { m.label = label || m.label; m.date = date; m.icon = icon; }
         }
+        saveMilestones();
+        updateProgress();
         closeMilestoneEdit();
+        if (currentPage === 'dates') navigateTo('dates');
       }
+
+      function deleteMilestone(id) {
+        milestones = milestones.filter(m => m.id !== id);
+        saveMilestones();
+        updateProgress();
+        if (currentPage === 'dates') navigateTo('dates');
+      }
+
+      // kept for backward compat
+      function saveMilestoneDate() { saveMilestoneEdit(); }
       function handleMilestoneBackdropClick(e) {
         if (e.target === document.getElementById('milestoneBackdrop')) closeMilestoneEdit();
+      }
+
+      // ── MEDS ──
+      function loadMeds() {
+        try { meds = JSON.parse(localStorage.getItem(MEDS_KEY)) || []; } catch { meds = []; }
+        try { medDone = JSON.parse(localStorage.getItem(MEDS_DONE_KEY)) || {}; } catch { medDone = {}; }
+      }
+      function saveMeds()     { localStorage.setItem(MEDS_KEY,      JSON.stringify(meds));    }
+      function saveMedDone()  { localStorage.setItem(MEDS_DONE_KEY, JSON.stringify(medDone)); }
+
+      function renderMedsPage(c) {
+        const todayISO = dateToISO(new Date());
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+
+        const cards = meds.map(med => {
+          const active = todayISO >= med.startDate && todayISO <= med.endDate;
+          const future = todayISO < med.startDate;
+          const statusLabel = active
+            ? `<span class="med-card-status" style="color:var(--accent)">● Active</span>`
+            : future
+              ? `<span class="med-card-status" style="color:var(--text-secondary)">○ Starts ${med.startDate}</span>`
+              : `<span class="med-card-status" style="color:var(--text-secondary)">○ Ended</span>`;
+
+          let timingsHtml = '';
+          if (med.timings && med.timings.length > 0) {
+            const rows = med.timings.map(timing => {
+              const [h, m] = timing.split(':').map(Number);
+              const tMin = h * 60 + m;
+              const isDone = medDone[med.id]?.[todayISO]?.[timing] === true;
+              let statusEl = '', actionEl = '';
+              if (!active) {
+                statusEl = `<span class="timing-upcoming">${active ? '' : '—'}</span>`;
+              } else if (isDone) {
+                statusEl = `<span class="timing-done"><svg class="icon" style="width:12px;height:12px"><use href="#i-check"/></svg> Done</span>`;
+              } else if (nowMin >= tMin) {
+                statusEl = `<span class="timing-overdue">⚠ Overdue</span>`;
+                actionEl = `<button class="btn-take-now" onclick="markMedDone('${med.id}','${timing}','${todayISO}')">Mark Done</button>`;
+              } else {
+                statusEl = `<span class="timing-upcoming">Upcoming</span>`;
+                actionEl = `<button class="btn-mark-done" onclick="markMedDone('${med.id}','${timing}','${todayISO}')">Mark Done</button>`;
+              }
+              return `<div class="med-timing-row">
+                <span class="med-timing-time">${timing}</span>
+                <span class="med-timing-status">${statusEl}</span>
+                ${actionEl}
+              </div>`;
+            }).join('');
+            timingsHtml = `<div class="med-timings-section">
+              <div class="med-timings-label">Today's Doses — ${todayISO}</div>
+              ${rows}
+            </div>`;
+          }
+
+          return `<div class="med-card${!active?' inactive':''}">
+            <div class="med-card-header">
+              <div>
+                <div class="med-card-name">${escapeHtml(med.name)}</div>
+                <div class="med-card-range">${med.startDate} → ${med.endDate}</div>
+                ${statusLabel}
+              </div>
+              <div class="med-card-actions">
+                <button class="btn-icon" onclick="openMedModal('${med.id}')">
+                  <svg class="icon"><use href="#i-edit"/></svg>
+                </button>
+                <button class="btn-icon btn-del" onclick="deleteMed('${med.id}')">
+                  <svg class="icon"><use href="#i-trash"/></svg>
+                </button>
+              </div>
+            </div>
+            ${timingsHtml}
+          </div>`;
+        }).join('') || `<div class="page-empty">No medications added yet. Use ＋ Add Medication to get started.</div>`;
+
+        c.innerHTML = `
+          <div class="meds-toolbar">
+            <span style="font-size:0.7rem;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase">${meds.length} medication${meds.length!==1?'s':''}</span>
+            <button class="btn btn-sm" onclick="openMedModal(null)">＋ Add Medication</button>
+          </div>
+          <div class="meds-grid">${cards}</div>`;
+      }
+
+      function openMedModal(id) {
+        editingMedId = id;
+        const med = id ? meds.find(m => m.id === id) : null;
+        document.getElementById('medModalTitle').textContent = med ? 'Edit Medication' : 'Add Medication';
+        document.getElementById('medNameInput').value  = med ? med.name      : '';
+        document.getElementById('medStartInput').value = med ? med.startDate : dateToISO(START_DATE);
+        document.getElementById('medEndInput').value   = med ? med.endDate   : dateToISO(addDays(START_DATE, 280));
+
+        const container = document.getElementById('medTimingsContainer');
+        container.innerHTML = '';
+        const timings = med ? med.timings : [];
+        timings.forEach(t => addMedTimingInputRow(t, container));
+
+        document.getElementById('medModalBackdrop').classList.add('open');
+        document.getElementById('medNameInput').focus();
+      }
+
+      function closeMedModal() {
+        document.getElementById('medModalBackdrop').classList.remove('open');
+        editingMedId = null;
+      }
+
+      function handleMedModalBackdropClick(e) {
+        if (e.target === document.getElementById('medModalBackdrop')) closeMedModal();
+      }
+
+      function addMedTimingInput() {
+        addMedTimingInputRow('08:00', document.getElementById('medTimingsContainer'));
+      }
+
+      function addMedTimingInputRow(value, container) {
+        const row = document.createElement('div');
+        row.className = 'med-timing-input-row';
+        row.innerHTML = `
+          <input type="time" value="${value}" />
+          <button class="btn-remove-timing" onclick="this.parentElement.remove()" title="Remove">
+            <svg class="icon" style="width:13px;height:13px"><use href="#i-x"/></svg>
+          </button>`;
+        container.appendChild(row);
+      }
+
+      function saveMedModal() {
+        const name  = document.getElementById('medNameInput').value.trim();
+        const start = document.getElementById('medStartInput').value;
+        const end   = document.getElementById('medEndInput').value;
+        if (!name)  { alert('Please enter a medication name.'); return; }
+        if (!start) { alert('Please enter a start date.'); return; }
+        if (!end)   { alert('Please enter an end date.'); return; }
+        if (start > end) { alert('End date must be after start date.'); return; }
+
+        const timingInputs = document.querySelectorAll('#medTimingsContainer input[type="time"]');
+        const timings = [...timingInputs].map(i => i.value).filter(Boolean).sort();
+
+        if (editingMedId) {
+          const m = meds.find(x => x.id === editingMedId);
+          if (m) { m.name = name; m.startDate = start; m.endDate = end; m.timings = timings; }
+        } else {
+          meds.push({ id: 'med-' + Date.now(), name, startDate: start, endDate: end, timings });
+        }
+        saveMeds();
+        closeMedModal();
+        if (currentPage === 'meds') navigateTo('meds');
+      }
+
+      function deleteMed(id) {
+        if (!confirm('Remove this medication?')) return;
+        meds = meds.filter(m => m.id !== id);
+        delete medDone[id];
+        saveMeds();
+        saveMedDone();
+        if (currentPage === 'meds') navigateTo('meds');
+      }
+
+      function markMedDone(medId, timing, iso) {
+        if (!medDone[medId]) medDone[medId] = {};
+        if (!medDone[medId][iso]) medDone[medId][iso] = {};
+        medDone[medId][iso][timing] = true;
+        saveMedDone();
+        if (currentPage === 'meds') navigateTo('meds');
+      }
+
+      // ── MED ALERTS ──
+      function checkMedAlerts() {
+        const now = new Date();
+        const todayISO = dateToISO(now);
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+
+        // Load persisted shown-alerts for today
+        try {
+          const stored = JSON.parse(localStorage.getItem(ALERTS_SHOWN_KEY)) || {};
+          shownAlertsToday = new Set(stored.date === todayISO ? (stored.shown || []) : []);
+        } catch { shownAlertsToday = new Set(); }
+
+        for (const med of meds) {
+          if (todayISO < med.startDate || todayISO > med.endDate) continue;
+          for (const timing of (med.timings || [])) {
+            const [h, m] = timing.split(':').map(Number);
+            if (nowMin < h * 60 + m) continue;
+            const isDone = medDone[med.id]?.[todayISO]?.[timing] === true;
+            if (isDone) continue;
+            const key = `${med.id}:${timing}`;
+            if (shownAlertsToday.has(key)) continue;
+            shownAlertsToday.add(key);
+            // Persist
+            localStorage.setItem(ALERTS_SHOWN_KEY, JSON.stringify({ date: todayISO, shown: [...shownAlertsToday] }));
+            showMedAlert(med.name, timing, med.id);
+            return; // show one at a time
+          }
+        }
+      }
+
+      function showMedAlert(medName, timing, medId) {
+        document.getElementById('medAlertBody').innerHTML =
+          `<strong style="color:var(--text-primary)">${escapeHtml(medName)}</strong><br>
+           was scheduled at <strong>${timing}</strong> and has not been marked as done.`;
+        document.getElementById('medAlertBackdrop').classList.add('open');
+        // store context for "Take Me There"
+        document.getElementById('medAlertBackdrop').dataset.medId = medId;
+      }
+
+      function closeMedAlert() {
+        document.getElementById('medAlertBackdrop').classList.remove('open');
+      }
+
+      function goToMedsFromAlert() {
+        closeMedAlert();
+        navigateTo('meds');
       }
 
       // ── NOTE DETAIL ──
@@ -2465,7 +3107,7 @@
       }
 
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); closeMilestoneEdit(); closeTagEditor(); return; }
+        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); closeMilestoneEdit(); closeTagEditor(); closeMedModal(); closeMedAlert(); return; }
         // Arrow keys flip months — ignored while typing or when any modal is open
         const tag = document.activeElement.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -2477,17 +3119,24 @@
       // ── INIT ──
       async function init() {
         loadTags();
-        loadMilestoneDates();
+        loadMilestones();          // replaces loadMilestoneDates — also syncs milestoneDates
+        loadMeds();
         loadLocalNotes();
         updateProgress();
         buildMonthDropdown();
         renderCalendar();
         renderNotesList();
+        updateNavActive();
 
         await loadNotes();
         recomputeTagCounts();
         renderNotesList();
         renderCalendar();
+
+        // Check med alerts immediately, then every minute
+        checkMedAlerts();
+        medAlertInterval = setInterval(checkMedAlerts, 60000);
+
         await checkAndSendReminders();
       }
 
