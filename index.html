@@ -7,6 +7,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <style>
@@ -83,6 +84,13 @@
       }
       .nav-tab:hover { color: var(--accent); }
       .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+      .nav-home {
+        color: var(--text-primary);
+        border-right: 1px solid var(--border);
+        padding-right: 20px;
+        margin-right: 4px;
+      }
+      .nav-home:hover { color: var(--accent); }
 
       /* ── PANEL DRAWER ── */
       .panel-drawer {
@@ -544,6 +552,125 @@
       }
       .feature-desc { font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5; }
 
+      /* ── ATTACHMENTS ── */
+      .attach-area {
+        border: 1.5px dashed var(--border);
+        border-radius: 6px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: border-color 0.2s;
+      }
+      .attach-area:hover { border-color: var(--accent); }
+      .attach-buttons { display: flex; gap: 8px; }
+      .attach-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-secondary);
+        font-family: inherit;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        padding: 6px 12px;
+        cursor: pointer;
+        transition: border-color 0.2s, color 0.2s;
+      }
+      .attach-btn:hover { border-color: var(--accent); color: var(--accent); }
+      .attach-previews { display: flex; flex-wrap: wrap; gap: 8px; }
+      .attach-thumb {
+        position: relative;
+        width: 68px;
+        height: 68px;
+        border-radius: 5px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+      .attach-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .attach-file-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 6px 10px;
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        max-width: 160px;
+      }
+      .attach-file-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+      }
+      .attach-remove {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        background: rgba(10,20,40,0.85);
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        color: #ff6b6b;
+        font-size: 0.6rem;
+        width: 17px;
+        height: 17px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        padding: 0;
+        flex-shrink: 0;
+      }
+      .attach-remove-chip {
+        background: none;
+        border: none;
+        color: #ff6b6b;
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+        padding: 0;
+        flex-shrink: 0;
+      }
+      .attach-status { font-size: 0.7rem; color: var(--accent); }
+      .note-attachments { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+      .note-attach-thumb {
+        width: 38px;
+        height: 38px;
+        border-radius: 3px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .note-attach-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .note-attach-file {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 3px 8px;
+        font-size: 0.68rem;
+        color: var(--accent);
+        text-decoration: none;
+        max-width: 120px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      .note-attach-file:hover { border-color: var(--accent); }
+
       /* ── MODAL ── */
       .modal-backdrop {
         display: none;
@@ -562,11 +689,15 @@
         border-radius: 8px;
         padding: 26px;
         width: 100%;
-        max-width: 440px;
+        max-width: 520px;
+        max-height: 90vh;
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 14px;
       }
+      .modal::-webkit-scrollbar { width: 4px; }
+      .modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
       .modal-title {
         font-size: 0.95rem;
         font-weight: 700;
@@ -609,6 +740,7 @@
     <!-- TOP NAV -->
     <nav class="top-nav">
       <div class="top-nav-inner">
+        <button class="nav-tab nav-home" onclick="goHome()">🏠 Home</button>
         <button class="nav-tab" data-panel="dates"        onclick="togglePanel('dates')">⭐ Important Dates</button>
         <button class="nav-tab" data-panel="notes"        onclick="togglePanel('notes')">📝 Notes</button>
         <button class="nav-tab" data-panel="appointments" onclick="togglePanel('appointments')">📅 Upcoming Appointments</button>
@@ -720,9 +852,22 @@
             <button class="btn btn-sm" onclick="confirmNewTag()">Add</button>
           </div>
         </div>
+        <div class="modal-field">
+          <label class="modal-label">Attachments</label>
+          <div class="attach-area">
+            <div class="attach-buttons">
+              <button class="attach-btn" onclick="document.getElementById('modalFilePhoto').click()">📷 Photos</button>
+              <button class="attach-btn" onclick="document.getElementById('modalFileAny').click()">📎 Files</button>
+            </div>
+            <div class="attach-previews" id="modalAttachPreviews"></div>
+            <div class="attach-status" id="attachStatus" style="display:none"></div>
+          </div>
+          <input type="file" id="modalFilePhoto" multiple accept="image/*" style="display:none" onchange="handleFileSelect(event)" />
+          <input type="file" id="modalFileAny"   multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" style="display:none" onchange="handleFileSelect(event)" />
+        </div>
         <div class="modal-actions">
           <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
-          <button class="btn" onclick="saveModal()">Save</button>
+          <button class="btn" id="modalSaveBtn" onclick="saveModal()">Save</button>
         </div>
       </div>
     </div>
@@ -759,15 +904,18 @@
       const FIRESTORE_COLLECTION = 'pregnancy-notes';
 
       firebase.initializeApp(FIREBASE_CONFIG);
-      const db = firebase.firestore();
+      const db      = firebase.firestore();
+      const storage = firebase.storage();
       emailjs.init(EMAILJS_CONFIG.publicKey);
 
       // ── STATE ──
-      // notes[iso] = { text: string, tag: string }
-      let notes       = {};
-      let tags        = [];
-      let activePanel = null;
-      let modalDate   = null;
+      // notes[iso] = { text: string, tag: string, attachments: [{name,url,type}] }
+      let notes                    = {};
+      let tags                     = [];
+      let activePanel              = null;
+      let modalDate                = null;
+      let modalPendingFiles        = [];   // File objects chosen but not yet uploaded
+      let modalExistingAttachments = [];   // Already-saved {name,url,type} objects
 
       // ── UTILITY ──
       function dateToISO(d) {
@@ -847,9 +995,9 @@
 
       // ── NOTES PERSISTENCE ──
       function migrateNote(v) {
-        if (!v) return { text:'', tag:'' };
-        if (typeof v === 'string') return { text:v, tag:'' };
-        return { text: v.text||'', tag: v.tag||'' };
+        if (!v) return { text:'', tag:'', attachments:[] };
+        if (typeof v === 'string') return { text:v, tag:'', attachments:[] };
+        return { text: v.text||'', tag: v.tag||'', attachments: v.attachments||[] };
       }
 
       function loadLocalNotes() {
@@ -867,7 +1015,7 @@
           notes = {};
           snap.forEach(doc => {
             const d = doc.data();
-            notes[doc.id] = { text: d.text||'', tag: d.tag||'' };
+            notes[doc.id] = { text: d.text||'', tag: d.tag||'', attachments: d.attachments||[] };
           });
           cacheNotes();
         } catch(e) { console.warn('Firestore load failed:', e); }
@@ -875,9 +1023,10 @@
 
       function cacheNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 
-      function fbSave(iso, text, tag) {
+      function fbSave(iso, text, tag, attachments) {
         db.collection(FIRESTORE_COLLECTION).doc(iso).set({
           text, tag: tag||'', date: iso,
+          attachments: attachments||[],
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }).catch(e => console.warn('Firestore save failed:', e));
       }
@@ -903,6 +1052,16 @@
           try { await Promise.all(sends); localStorage.setItem(REMINDER_SENT_KEY, todayISO); }
           catch(e) { console.warn('EmailJS failed:', e); }
         }
+      }
+
+      // ── HOME ──
+      function goHome() {
+        if (activePanel) {
+          activePanel = null;
+          document.getElementById('panelDrawer').classList.remove('open');
+          document.querySelectorAll('.nav-tab[data-panel]').forEach(t => t.classList.remove('active'));
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
       // ── TOP NAV PANELS ──
@@ -980,6 +1139,7 @@
                   <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
                 </div>
                 <div class="notes-panel-text">${escapeHtml(n.text)}</div>
+                ${attachmentsHtml(n.attachments)}
               </div>`;
             }).join('')}</div>`;
 
@@ -1010,10 +1170,99 @@
                   ${tagPillHtml(n.tag)}
                   <div class="appt-text">${escapeHtml(n.text)}</div>
                 </div>
+                ${attachmentsHtml(n.attachments)}
               </div>`;
             }).join('')}</div>`;
 
         c.innerHTML = `<div class="panel-section-title">📅 Upcoming Appointments</div>${items}`;
+      }
+
+      // ── ATTACHMENTS ──
+      function isImage(type) { return (type||'').startsWith('image/'); }
+
+      function attachmentsHtml(attachments) {
+        if (!attachments || !attachments.length) return '';
+        const inner = attachments.map(a => {
+          if (isImage(a.type)) {
+            return `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener" class="note-attach-thumb">
+              <img src="${escapeHtml(a.url)}" alt="${escapeHtml(a.name)}" loading="lazy" />
+            </a>`;
+          }
+          return `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener" class="note-attach-file">📎 ${escapeHtml(a.name)}</a>`;
+        }).join('');
+        return `<div class="note-attachments">${inner}</div>`;
+      }
+
+      function handleFileSelect(e) {
+        const files = Array.from(e.target.files);
+        e.target.value = '';
+        files.forEach(f => {
+          if (!modalPendingFiles.some(p => p.name===f.name && p.size===f.size)) {
+            modalPendingFiles.push(f);
+          }
+        });
+        renderAttachPreviews();
+      }
+
+      function removePending(idx) {
+        modalPendingFiles.splice(idx, 1);
+        renderAttachPreviews();
+      }
+
+      function removeExisting(idx) {
+        modalExistingAttachments.splice(idx, 1);
+        renderAttachPreviews();
+      }
+
+      function renderAttachPreviews() {
+        const area = document.getElementById('modalAttachPreviews');
+        let html = '';
+
+        modalExistingAttachments.forEach((a, i) => {
+          if (isImage(a.type)) {
+            html += `<div class="attach-thumb">
+              <a href="${escapeHtml(a.url)}" target="_blank"><img src="${escapeHtml(a.url)}" alt="${escapeHtml(a.name)}" /></a>
+              <button class="attach-remove" onclick="removeExisting(${i})" title="Remove">✕</button>
+            </div>`;
+          } else {
+            html += `<div class="attach-file-chip">
+              <span>📎</span>
+              <span class="attach-file-name" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</span>
+              <button class="attach-remove-chip" onclick="removeExisting(${i})" title="Remove">✕</button>
+            </div>`;
+          }
+        });
+
+        modalPendingFiles.forEach((f, i) => {
+          if (f.type.startsWith('image/')) {
+            const objUrl = URL.createObjectURL(f);
+            html += `<div class="attach-thumb" data-pending="${i}">
+              <img src="${objUrl}" alt="${escapeHtml(f.name)}" onload="URL.revokeObjectURL(this.src)" />
+              <button class="attach-remove" onclick="removePending(${i})" title="Remove">✕</button>
+            </div>`;
+          } else {
+            html += `<div class="attach-file-chip">
+              <span>📎</span>
+              <span class="attach-file-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+              <button class="attach-remove-chip" onclick="removePending(${i})" title="Remove">✕</button>
+            </div>`;
+          }
+        });
+
+        area.innerHTML = html;
+      }
+
+      async function uploadPendingFiles(iso) {
+        if (!modalPendingFiles.length) return [];
+        const results = [];
+        for (const file of modalPendingFiles) {
+          const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const ref = storage.ref(`attachments/${iso}/${safeName}`);
+          const snap = await ref.put(file);
+          const url  = await snap.ref.getDownloadURL();
+          results.push({ name: file.name, url, type: file.type });
+        }
+        return results;
       }
 
       // ── CALENDAR ──
@@ -1147,7 +1396,8 @@
               ${tagPillHtml(n.tag)}
               <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
             </div>
-            <div class="note-text">${escapeHtml(n.text)}</div>`;
+            <div class="note-text">${escapeHtml(n.text)}</div>
+            ${attachmentsHtml(n.attachments)}`;
           list.appendChild(item);
         });
       }
@@ -1171,8 +1421,8 @@
         if (!text) return;
         const tag=document.getElementById('quickNoteTag').value;
         const iso=dateToISO(new Date());
-        notes[iso]={text,tag};
-        fbSave(iso,text,tag);
+        notes[iso]={text,tag,attachments:[]};
+        fbSave(iso,text,tag,[]);
         cacheNotes();
         inp.value='';
         refreshAll();
@@ -1183,36 +1433,66 @@
 
       // ── MODAL ──
       function openModal(iso) {
-        modalDate=iso;
-        document.getElementById('modalTitle').textContent=`Add Note for ${isoToDisplay(iso)}`;
+        modalDate                = iso;
+        modalPendingFiles        = [];
+        modalExistingAttachments = (notes[iso] && notes[iso].attachments) ? [...notes[iso].attachments] : [];
+        document.getElementById('modalTitle').textContent = `Add Note for ${isoToDisplay(iso)}`;
         const n=notes[iso];
         document.getElementById('modalTextarea').value = n ? n.text : '';
         populateTagSelect('modalTagSelect', n ? n.tag : '');
         document.getElementById('newTagRow').classList.remove('visible');
+        document.getElementById('attachStatus').style.display = 'none';
+        document.getElementById('modalSaveBtn').textContent = 'Save';
+        document.getElementById('modalSaveBtn').disabled = false;
+        renderAttachPreviews();
         document.getElementById('modalBackdrop').classList.add('open');
         document.getElementById('modalTextarea').focus();
       }
 
       function closeModal() {
         document.getElementById('modalBackdrop').classList.remove('open');
-        modalDate=null;
+        modalDate                = null;
+        modalPendingFiles        = [];
+        modalExistingAttachments = [];
       }
 
-      function saveModal() {
-        const text=document.getElementById('modalTextarea').value.trim();
-        const tagVal=document.getElementById('modalTagSelect').value;
-        const tag=tagVal==='__new__' ? '' : tagVal;
-        if (modalDate) {
-          if (text) {
-            notes[modalDate]={text,tag};
-            fbSave(modalDate,text,tag);
-          } else {
-            delete notes[modalDate];
-            fbDelete(modalDate);
+      async function saveModal() {
+        const text   = document.getElementById('modalTextarea').value.trim();
+        const tagVal = document.getElementById('modalTagSelect').value;
+        const tag    = tagVal==='__new__' ? '' : tagVal;
+        if (!modalDate) return;
+
+        const saveBtn  = document.getElementById('modalSaveBtn');
+        const statusEl = document.getElementById('attachStatus');
+
+        if (modalPendingFiles.length) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Uploading…';
+          statusEl.style.display = 'block';
+          statusEl.textContent   = `Uploading ${modalPendingFiles.length} file(s)…`;
+          try {
+            const uploaded = await uploadPendingFiles(modalDate);
+            modalExistingAttachments = [...modalExistingAttachments, ...uploaded];
+            modalPendingFiles = [];
+          } catch(e) {
+            statusEl.textContent = 'Upload failed. Please try again.';
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+            console.warn('Storage upload error:', e);
+            return;
           }
-          cacheNotes();
-          refreshAll();
         }
+
+        const attachments = modalExistingAttachments;
+        if (text || attachments.length) {
+          notes[modalDate] = { text, tag, attachments };
+          fbSave(modalDate, text, tag, attachments);
+        } else {
+          delete notes[modalDate];
+          fbDelete(modalDate);
+        }
+        cacheNotes();
+        refreshAll();
         closeModal();
       }
 
