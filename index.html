@@ -1270,7 +1270,7 @@
         <div class="modal-field" id="visitNumRow" style="display:none">
           <label class="modal-label">Visit #</label>
           <div style="display:flex;align-items:center;gap:10px">
-            <input type="number" id="modalVisitNum" min="1" step="1"
+            <input type="number" id="modalVisitNum" min="1" step="1" oninput="syncTagDropdownCount()"
               style="width:80px;padding:8px 12px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:0.95rem" />
             <span style="color:var(--text-secondary);font-size:0.8rem">which visit / test / scan</span>
           </div>
@@ -1440,6 +1440,20 @@
         return count + 1;
       }
 
+      function syncTagDropdownCount() {
+        const sel = document.getElementById('modalTagSelect');
+        if (!sel) return;
+        const tag = sel.value;
+        if (!tag || tag === '__new__') return;
+        const vNum = parseInt(document.getElementById('modalVisitNum').value, 10);
+        for (const opt of sel.options) {
+          if (opt.value === tag) {
+            opt.textContent = (!isNaN(vNum) && vNum >= 1) ? `${tag} (${vNum})` : tag;
+            break;
+          }
+        }
+      }
+
       function updateVisitNumForTag(tag) {
         const row = document.getElementById('visitNumRow');
         if (!row) return;
@@ -1448,6 +1462,7 @@
           const existingNote = notes[modalDate];
           const storedNum = existingNote && existingNote.tag === tag ? existingNote.visitNum : null;
           document.getElementById('modalVisitNum').value = storedNum || nextVisitNum(tag, modalDate);
+          syncTagDropdownCount();
         } else {
           row.style.display = 'none';
           document.getElementById('modalVisitNum').value = '';
@@ -2396,11 +2411,12 @@
         document.getElementById('attachStatus').style.display = 'none';
         document.getElementById('modalSaveBtn').textContent = 'Save';
         document.getElementById('modalSaveBtn').disabled    = false;
-        // Visit number field
+        // Visit number field — keep in sync with dropdown brackets
         const tag = n ? n.tag : '';
         if (tag) {
           document.getElementById('visitNumRow').style.display = 'block';
           document.getElementById('modalVisitNum').value = n.visitNum || nextVisitNum(tag, iso);
+          syncTagDropdownCount();
         } else {
           document.getElementById('visitNumRow').style.display = 'none';
           document.getElementById('modalVisitNum').value = '';
