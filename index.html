@@ -1561,20 +1561,6 @@
         <aside class="sidebar">
 
           <div class="section-card">
-            <div class="section-title"><svg class="icon"><use href="#i-activity"/></svg> Progress</div>
-            <div class="stat-grid">
-              <div class="stat-box">
-                <div class="stat-number" id="currentWeek">—</div>
-                <div class="stat-label">Current Week</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-number" id="weeksRemaining">—</div>
-                <div class="stat-label">Weeks Remaining</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-card">
             <div class="section-title"><svg class="icon"><use href="#i-layers"/></svg> Trimesters</div>
             <div class="trimester-card" style="border-left-color:var(--t1-color)">
               <div class="trimester-name">1st Trimester · Weeks 1–13</div>
@@ -1588,14 +1574,6 @@
               <div class="trimester-name">3rd Trimester · Weeks 27–40</div>
               <div class="trimester-desc">Oct 27, 2026 – Feb 9, 2027 · Rapid growth and final countdown.</div>
             </div>
-          </div>
-
-          <div class="section-card">
-            <div class="section-title-row">
-              <div class="section-title" style="margin-bottom:0"><svg class="icon"><use href="#i-edit"/></svg> Notes</div>
-              <button class="add-note-btn" onclick="openAddNoteModal()" title="Add note">＋</button>
-            </div>
-            <div class="notes-list" id="notesList"></div>
           </div>
 
         </aside>
@@ -2365,8 +2343,6 @@
         const wk=weekNumber(today);
         const cur = wk!==null&&wk>=1 ? Math.min(wk,TOTAL_WEEKS) : '—';
         const rem = wk!==null&&wk>=1 ? Math.max(0,TOTAL_WEEKS-Math.min(wk,TOTAL_WEEKS)) : '—';
-        document.getElementById('currentWeek').textContent    = cur;
-        document.getElementById('weeksRemaining').textContent = rem;
 
         // Stat strip — target date honours an edited "Due Date" milestone
         const days      = daysSinceStart(today);
@@ -2383,29 +2359,7 @@
         document.getElementById('tilePctSub').textContent  = `${rem} weeks remaining`;
       }
 
-      // ── SIDEBAR NOTES LIST ──
-      function renderNotesList() {
-        const list = document.getElementById('notesList');
-        list.innerHTML = '';
-        const entries = Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0]));
-        if (entries.length===0) {
-          list.innerHTML = '<div class="notes-empty">No notes yet. Click a date to add one.</div>';
-          return;
-        }
-        entries.forEach(([iso,n]) => {
-          const color = n.tag ? tagColor(n.tag) : 'var(--border)';
-          const item = document.createElement('div');
-          item.className='note-item'; item.style.borderLeftColor=color;
-          item.innerHTML=`
-            <div class="note-item-header">
-              <span class="note-date">${isoToDisplay(iso)}</span>
-              ${tagPillHtml(n.tag, n.visitNum)}
-            </div>
-            <div class="note-text">${escapeHtml(n.text)}</div>`;
-          item.addEventListener('click', () => openNoteDetail(iso));
-          list.appendChild(item);
-        });
-      }
+      function renderNotesList() { /* sidebar notes removed */ }
 
       function refreshPageContent() {
         if (currentPage === 'home') return;
