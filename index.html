@@ -1817,6 +1817,7 @@
       const MILESTONES_KEY       = 'journalMilestones';
       const MEDS_KEY             = 'journalMeds';
       const MEDS_DONE_KEY        = 'journalMedsDone';
+      const MEDS_COLLECTION      = 'pregnancy-meds';
       const ALERTS_SHOWN_KEY     = 'journalMedAlertsShown';
       const DEFAULT_MILESTONES = [
         { icon:'i-target',      label:'Due Date',         day:280 },
@@ -2793,11 +2794,42 @@
 
       // ── MEDS ──
       function loadMeds() {
-        try { meds = JSON.parse(localStorage.getItem(MEDS_KEY)) || []; } catch { meds = []; }
+        try { meds    = JSON.parse(localStorage.getItem(MEDS_KEY))      || []; } catch { meds    = []; }
         try { medDone = JSON.parse(localStorage.getItem(MEDS_DONE_KEY)) || {}; } catch { medDone = {}; }
       }
-      function saveMeds()     { localStorage.setItem(MEDS_KEY,      JSON.stringify(meds));    }
-      function saveMedDone()  { localStorage.setItem(MEDS_DONE_KEY, JSON.stringify(medDone)); }
+
+      async function loadMedsFromFirebase() {
+        try {
+          const [listSnap, doneSnap] = await Promise.all([
+            db.collection(MEDS_COLLECTION).doc('list').get(),
+            db.collection(MEDS_COLLECTION).doc('done').get(),
+          ]);
+          if (listSnap.exists) {
+            meds = listSnap.data().meds || [];
+            localStorage.setItem(MEDS_KEY, JSON.stringify(meds));
+          }
+          if (doneSnap.exists) {
+            medDone = doneSnap.data().medDone || {};
+            localStorage.setItem(MEDS_DONE_KEY, JSON.stringify(medDone));
+          }
+        } catch(e) { console.warn('Firestore meds load failed:', e); }
+      }
+
+      function saveMeds() {
+        localStorage.setItem(MEDS_KEY, JSON.stringify(meds));
+        db.collection(MEDS_COLLECTION).doc('list').set({
+          meds,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(e => console.warn('Firestore meds save failed:', e));
+      }
+
+      function saveMedDone() {
+        localStorage.setItem(MEDS_DONE_KEY, JSON.stringify(medDone));
+        db.collection(MEDS_COLLECTION).doc('done').set({
+          medDone,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(e => console.warn('Firestore medDone save failed:', e));
+      }
 
       function renderMedsPage(c) {
         const todayISO = dateToISO(new Date());
@@ -3133,6 +3165,9 @@
         recomputeTagCounts();
         renderNotesList();
         renderCalendar();
+
+        await loadMedsFromFirebase();
+        if (currentPage === 'meds') refreshPageContent();
 
         // Check med alerts immediately, then every minute
         checkMedAlerts();
