@@ -1267,6 +1267,14 @@
             <button class="btn btn-sm" onclick="confirmNewTag()">Add</button>
           </div>
         </div>
+        <div class="modal-field" id="visitNumRow" style="display:none">
+          <label class="modal-label">Visit #</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="number" id="modalVisitNum" min="1" step="1"
+              style="width:80px;padding:8px 12px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:0.95rem" />
+            <span style="color:var(--text-secondary);font-size:0.8rem">which visit / test / scan</span>
+          </div>
+        </div>
         <div class="modal-field">
           <label class="modal-label">Cost</label>
           <div class="modal-cost-wrap">
@@ -1348,7 +1356,6 @@
       let editingTag              = null;  // null = add new, string = rename existing
       let tagDeletePending        = null;
       let tagDeleteTimer          = null;
-      let tagCountOverrides       = JSON.parse(localStorage.getItem('journalTagCountOverrides') || '{}');
 
       // ── UTILITY ──
       function dateToISO(d) {
@@ -1395,11 +1402,11 @@
         });
       }
 
-      function tagPillHtml(tag) {
+      function tagPillHtml(tag, visitNum) {
         if (!tag) return '';
-        const c     = tagColor(tag);
-        const count = tagCountOverrides[tag] !== undefined ? tagCountOverrides[tag] : tagCounts[tag];
-        const label = count ? `${escapeHtml(tag)} · ${count}` : escapeHtml(tag);
+        const c   = tagColor(tag);
+        const num = visitNum != null ? visitNum : tagCounts[tag];
+        const label = num ? `${escapeHtml(tag)} · ${num}` : escapeHtml(tag);
         return `<span class="tag-pill" style="background:${c}22;color:${c};border-color:${c}66">${label}</span>`;
       }
       function costBadgeHtml(cost) {
@@ -1426,10 +1433,32 @@
         sel.appendChild(np);
       }
 
+      function nextVisitNum(tag, excludeIso) {
+        const count = Object.entries(notes)
+          .filter(([k, n]) => k !== excludeIso && n.tag === tag)
+          .length;
+        return count + 1;
+      }
+
+      function updateVisitNumForTag(tag) {
+        const row = document.getElementById('visitNumRow');
+        if (!row) return;
+        if (tag) {
+          row.style.display = 'block';
+          const existingNote = notes[modalDate];
+          const storedNum = existingNote && existingNote.tag === tag ? existingNote.visitNum : null;
+          document.getElementById('modalVisitNum').value = storedNum || nextVisitNum(tag, modalDate);
+        } else {
+          row.style.display = 'none';
+          document.getElementById('modalVisitNum').value = '';
+        }
+      }
+
       function handleTagSelectChange() {
         const v = document.getElementById('modalTagSelect').value;
         document.getElementById('newTagRow').classList.toggle('visible', v === '__new__');
         if (v === '__new__') document.getElementById('newTagInput').focus();
+        updateVisitNumForTag(v === '__new__' ? '' : v);
       }
 
       function confirmNewTag() {
@@ -1441,13 +1470,14 @@
         document.getElementById('newTagRow').classList.remove('visible');
         populateTagSelect('modalTagSelect', name);
         populateTagSelect('quickNoteTag');
+        updateVisitNumForTag(name);
       }
 
       // ── NOTES PERSISTENCE ──
       function migrateNote(v) {
-        if (!v) return { text:'', tag:'', cost:'', attachments:[] };
-        if (typeof v === 'string') return { text:v, tag:'', cost:'', attachments:[] };
-        return { text: v.text||'', tag: v.tag||'', cost: v.cost||'', attachments: v.attachments||[] };
+        if (!v) return { text:'', tag:'', cost:'', attachments:[], visitNum:null };
+        if (typeof v === 'string') return { text:v, tag:'', cost:'', attachments:[], visitNum:null };
+        return { text: v.text||'', tag: v.tag||'', cost: v.cost||'', attachments: v.attachments||[], visitNum: v.visitNum||null };
       }
 
       function loadLocalNotes() {
@@ -1473,10 +1503,11 @@
 
       function cacheNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 
-      function fbSave(iso, text, tag, cost, attachments) {
+      function fbSave(iso, text, tag, cost, attachments, visitNum) {
         db.collection(FIRESTORE_COLLECTION).doc(iso).set({
           text, tag: tag||'', cost: cost||'', date: iso,
           attachments: attachments||[],
+          visitNum: visitNum || null,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }).catch(e => console.warn('Firestore save failed:', e));
       }
@@ -1592,7 +1623,7 @@
               return `<div class="notes-panel-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}')">
                 <div class="notes-panel-row">
                   <span class="notes-panel-date">${isoToDisplay(iso)}</span>
-                  ${tagPillHtml(n.tag)}
+                  ${tagPillHtml(n.tag, n.visitNum)}
                 </div>
                 <div class="notes-panel-text">${escapeHtml(n.text)}</div>
                 ${attachmentsHtml(n.attachments)}
@@ -1623,7 +1654,7 @@
                   <div class="appt-cd">${cd}</div>
                 </div>
                 <div class="appt-right">
-                  ${tagPillHtml(n.tag)}
+                  ${tagPillHtml(n.tag, n.visitNum)}
                   ${costBadgeHtml(n.cost)}
                   <div class="appt-text">${escapeHtml(n.text)}</div>
                 </div>
@@ -1946,7 +1977,7 @@
           item.innerHTML=`
             <div class="note-item-header">
               <span class="note-date">${isoToDisplay(iso)}</span>
-              ${tagPillHtml(n.tag)}
+              ${tagPillHtml(n.tag, n.visitNum)}
             </div>
             <div class="note-text">${escapeHtml(n.text)}</div>
             ${attachmentsHtml(n.attachments)}`;
@@ -2117,7 +2148,7 @@
           return `<div class="history-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}')">
             <div class="history-item-header">
               <span class="history-item-date">${isoToDisplay(iso)}</span>
-              ${tagPillHtml(n.tag)}
+              ${tagPillHtml(n.tag, n.visitNum)}
               ${costHtml}
             </div>
             <div class="history-item-text">${escapeHtml(n.text)}</div>
@@ -2194,7 +2225,7 @@
           Object.keys(notes).forEach(iso => {
             if (notes[iso].tag === editingTag) {
               notes[iso] = { ...notes[iso], tag: newName };
-              fbSave(iso, notes[iso].text, newName, notes[iso].cost, notes[iso].attachments);
+              fbSave(iso, notes[iso].text, newName, notes[iso].cost, notes[iso].attachments, notes[iso].visitNum);
             }
           });
           cacheNotes();
@@ -2226,8 +2257,8 @@
         // Strip tag from notes
         Object.keys(notes).forEach(iso => {
           if (notes[iso].tag === tag) {
-            notes[iso] = { ...notes[iso], tag: '' };
-            fbSave(iso, notes[iso].text, '', notes[iso].cost, notes[iso].attachments);
+            notes[iso] = { ...notes[iso], tag: '', visitNum: null };
+            fbSave(iso, notes[iso].text, '', notes[iso].cost, notes[iso].attachments, null);
           }
         });
         cacheNotes();
@@ -2275,7 +2306,7 @@
         detailIso = iso;
 
         document.getElementById('detailDate').textContent = isoToDisplay(iso);
-        document.getElementById('detailTag').innerHTML    = tagPillHtml(n.tag);
+        document.getElementById('detailTag').innerHTML    = tagPillHtml(n.tag, n.visitNum);
         document.getElementById('detailTagCountEditBtn').style.display = n.tag ? 'inline-flex' : 'none';
         document.getElementById('detailTagCountEditRow').style.display = 'none';
         document.getElementById('detailCost').innerHTML   = costBadgeHtml(n.cost);
@@ -2317,14 +2348,10 @@
         if (e.target === document.getElementById('detailBackdrop')) closeNoteDetail();
       }
 
-      function saveTagCountOverrides() {
-        localStorage.setItem('journalTagCountOverrides', JSON.stringify(tagCountOverrides));
-      }
-
       function openTagCountEdit() {
         const n = notes[detailIso];
         if (!n || !n.tag) return;
-        const current = tagCountOverrides[n.tag] !== undefined ? tagCountOverrides[n.tag] : (tagCounts[n.tag] || 0);
+        const current = n.visitNum || tagCounts[n.tag] || 1;
         document.getElementById('detailTagCountInput').value = current;
         document.getElementById('detailTagCountTagName').textContent = n.tag;
         document.getElementById('detailTagCountEditRow').style.display = 'flex';
@@ -2336,10 +2363,11 @@
         const n = notes[detailIso];
         if (!n || !n.tag) return;
         const val = parseInt(document.getElementById('detailTagCountInput').value, 10);
-        if (!isNaN(val) && val >= 0) {
-          tagCountOverrides[n.tag] = val;
-          saveTagCountOverrides();
-          document.getElementById('detailTag').innerHTML = tagPillHtml(n.tag);
+        if (!isNaN(val) && val >= 1) {
+          notes[detailIso] = { ...n, visitNum: val };
+          cacheNotes();
+          fbSave(detailIso, n.text, n.tag, n.cost, n.attachments, val);
+          document.getElementById('detailTag').innerHTML = tagPillHtml(n.tag, val);
           renderNotesList();
           if (activePanel) renderPanel(activePanel);
         }
@@ -2368,6 +2396,15 @@
         document.getElementById('attachStatus').style.display = 'none';
         document.getElementById('modalSaveBtn').textContent = 'Save';
         document.getElementById('modalSaveBtn').disabled    = false;
+        // Visit number field
+        const tag = n ? n.tag : '';
+        if (tag) {
+          document.getElementById('visitNumRow').style.display = 'block';
+          document.getElementById('modalVisitNum').value = n.visitNum || nextVisitNum(tag, iso);
+        } else {
+          document.getElementById('visitNumRow').style.display = 'none';
+          document.getElementById('modalVisitNum').value = '';
+        }
         renderAttachPreviews();
         document.getElementById('modalBackdrop').classList.add('open');
         document.getElementById('modalTextarea').focus();
@@ -2389,6 +2426,8 @@
         const tagVal = document.getElementById('modalTagSelect').value;
         const tag    = tagVal==='__new__' ? '' : tagVal;
         const cost   = document.getElementById('modalCostInput').value.trim();
+        const visitNumRaw = parseInt(document.getElementById('modalVisitNum').value, 10);
+        const visitNum = tag && !isNaN(visitNumRaw) && visitNumRaw >= 1 ? visitNumRaw : null;
         if (!modalDate) return;
 
         const saveBtn  = document.getElementById('modalSaveBtn');
@@ -2421,8 +2460,8 @@
         }
 
         if (text || attachments.length || cost) {
-          notes[saveIso] = { text, tag, cost, attachments };
-          fbSave(saveIso, text, tag, cost, attachments);
+          notes[saveIso] = { text, tag, cost, attachments, visitNum };
+          fbSave(saveIso, text, tag, cost, attachments, visitNum);
         } else {
           delete notes[saveIso];
           fbDelete(saveIso);
