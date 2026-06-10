@@ -75,6 +75,55 @@
       }
 
       /* ===== CALENDAR AREA ===== */
+      .calendar-column {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .month-selector-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--bg-container);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 16px;
+      }
+
+      .month-selector-row label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+      }
+
+      #monthDropdown {
+        flex: 1;
+        background: var(--bg-section);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        cursor: pointer;
+        outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300bfff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 32px;
+        transition: border-color 0.2s;
+      }
+
+      #monthDropdown:hover, #monthDropdown:focus { border-color: var(--accent); }
+
+      #monthDropdown option { background: var(--bg-section); }
+
       .calendar-area {
         display: flex;
         flex-direction: column;
@@ -532,7 +581,13 @@
       <div class="main-grid">
 
         <!-- CALENDAR (left) -->
-        <div class="calendar-area" id="calendarArea"></div>
+        <div class="calendar-column">
+          <div class="month-selector-row">
+            <label for="monthDropdown">Month</label>
+            <select id="monthDropdown" onchange="onMonthChange()"></select>
+          </div>
+          <div class="calendar-area" id="calendarArea"></div>
+        </div>
 
         <!-- SIDEBAR (right) -->
         <aside class="sidebar">
@@ -714,6 +769,31 @@
         return months;
       }
 
+      // Index into getMonthsToRender() for the currently displayed month
+      let selectedMonthIdx = (function () {
+        const allMonths = getMonthsToRender();
+        const now = new Date();
+        const idx = allMonths.findIndex(m => m.year === now.getFullYear() && m.month === now.getMonth());
+        return idx !== -1 ? idx : 0;
+      })();
+
+      function buildMonthDropdown() {
+        const sel = document.getElementById('monthDropdown');
+        sel.innerHTML = '';
+        getMonthsToRender().forEach(({ year, month }, i) => {
+          const opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = `${MONTH_NAMES[month]} ${year}`;
+          if (i === selectedMonthIdx) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+
+      function onMonthChange() {
+        selectedMonthIdx = parseInt(document.getElementById('monthDropdown').value, 10);
+        renderCalendar();
+      }
+
       // Returns the Monday on or before the given date
       function startOfWeekMon(date) {
         const d = new Date(date);
@@ -729,7 +809,8 @@
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        getMonthsToRender().forEach(({ year, month }) => {
+        const monthsAll = getMonthsToRender();
+        [monthsAll[selectedMonthIdx]].forEach(({ year, month }) => {
           const card = document.createElement('div');
           card.className = 'month-card';
 
@@ -970,6 +1051,7 @@
       updateProgress();
       renderImportantDates();
       renderNotesList();
+      buildMonthDropdown();
       renderCalendar();
     </script>
   </body>
