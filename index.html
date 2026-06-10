@@ -1620,15 +1620,20 @@
       // ── ATTACHMENTS ──
       function isImage(type) { return (type||'').startsWith('image/'); }
 
+      function resolveAttachUrl(a) {
+        return a.url || attachmentCache[a.localId] || '';
+      }
       function attachmentsHtml(attachments) {
         if (!attachments || !attachments.length) return '';
         const inner = attachments.map(a => {
+          const url = resolveAttachUrl(a);
+          if (!url) return `<span class="note-attach-file" title="${escapeHtml(a.name)}">📎 ${escapeHtml(a.name)}</span>`;
           if (isImage(a.type)) {
-            return `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener" class="note-attach-thumb">
-              <img src="${escapeHtml(a.url)}" alt="${escapeHtml(a.name)}" loading="lazy" />
+            return `<a href="${url}" target="_blank" rel="noopener" class="note-attach-thumb">
+              <img src="${url}" alt="${escapeHtml(a.name)}" loading="lazy" />
             </a>`;
           }
-          return `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener" class="note-attach-file">📎 ${escapeHtml(a.name)}</a>`;
+          return `<a href="${url}" download="${escapeHtml(a.name)}" class="note-attach-file">📎 ${escapeHtml(a.name)}</a>`;
         }).join('');
         return `<div class="note-attachments">${inner}</div>`;
       }
@@ -1659,9 +1664,10 @@
         let html = '';
 
         modalExistingAttachments.forEach((a, i) => {
-          if (isImage(a.type)) {
+          const url = resolveAttachUrl(a);
+          if (isImage(a.type) && url) {
             html += `<div class="attach-thumb">
-              <a href="${escapeHtml(a.url)}" target="_blank"><img src="${escapeHtml(a.url)}" alt="${escapeHtml(a.name)}" /></a>
+              <a href="${url}" target="_blank"><img src="${url}" alt="${escapeHtml(a.name)}" /></a>
               <button class="attach-remove" onclick="removeExisting(${i})" title="Remove">✕</button>
             </div>`;
           } else {
@@ -1692,21 +1698,69 @@
         area.innerHTML = html;
       }
 
-      const MAX_FILE_BYTES = 700 * 1024; // 700 KB per file
+      // ── INDEXEDDB FILE STORE ──
+      const IDB_NAME    = 'journalFiles';
+      const IDB_STORE   = 'attachments';
+      const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
-      async function readFilesAsDataURLs(files) {
+      let attachmentCache = {}; // localId → dataURL (in-memory, for sync rendering)
+
+      function openIDB() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(IDB_NAME, 1);
+          req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
+          req.onsuccess = e => resolve(e.target.result);
+          req.onerror   = e => reject(e.target.error);
+        });
+      }
+      async function idbSave(id, name, type, dataUrl) {
+        const db = await openIDB();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put({ id, name, type, dataUrl });
+          req.onsuccess = () => resolve();
+          req.onerror   = () => reject(req.error);
+        });
+      }
+      async function idbGet(id) {
+        const db = await openIDB();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(id);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror   = () => reject(req.error);
+        });
+      }
+      async function idbDelete(id) {
+        const db = await openIDB();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(id);
+          req.onsuccess = () => resolve();
+          req.onerror   = () => reject(req.error);
+        });
+      }
+      async function refreshAttachmentCache() {
+        const ids = [];
+        Object.values(notes).forEach(n => (n.attachments||[]).forEach(a => {
+          if (a.localId && !attachmentCache[a.localId]) ids.push(a.localId);
+        }));
+        for (const id of ids) {
+          try { const rec = await idbGet(id); if (rec) attachmentCache[id] = rec.dataUrl; }
+          catch(e) { /* file missing — skip */ }
+        }
+      }
+      async function readFilesIntoIDB(files) {
         const results = [];
         for (const file of files) {
-          if (file.size > MAX_FILE_BYTES) {
-            throw new Error(`"${file.name}" is larger than 700 KB. Please compress it and try again.`);
-          }
+          if (file.size > MAX_FILE_BYTES) throw new Error(`"${file.name}" exceeds 10 MB.`);
           const dataUrl = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload  = e => resolve(e.target.result);
             reader.onerror = () => reject(new Error(`Could not read "${file.name}"`));
             reader.readAsDataURL(file);
           });
-          results.push({ name: file.name, type: file.type, url: dataUrl });
+          const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          await idbSave(id, file.name, file.type, dataUrl);
+          attachmentCache[id] = dataUrl;
+          results.push({ name: file.name, type: file.type, localId: id });
         }
         return results;
       }
@@ -1860,17 +1914,19 @@
         // Commit any previously pending delete before starting a new one
         if (pendingDelete) {
           clearTimeout(pendingDeleteTimer);
+          (pendingDelete.note.attachments||[]).forEach(a => { if (a.localId) idbDelete(a.localId).catch(()=>{}); });
           fbDelete(pendingDelete.iso);
           cacheNotes();
         }
 
-        pendingDelete = { iso, note: { ...notes[iso] } };
+        pendingDelete = { iso, note: { ...notes[iso], attachments: [...(notes[iso]?.attachments||[])] } };
         delete notes[iso];
         refreshAll();
         showUndoToast();
 
         pendingDeleteTimer = setTimeout(() => {
           if (pendingDelete) {
+            (pendingDelete.note.attachments||[]).forEach(a => { if (a.localId) idbDelete(a.localId).catch(()=>{}); });
             fbDelete(pendingDelete.iso);
             cacheNotes();
             pendingDelete = null;
@@ -2254,7 +2310,7 @@
           statusEl.style.display = 'block';
           statusEl.textContent   = `Reading ${modalPendingFiles.length} file(s)…`;
           try {
-            const read = await readFilesAsDataURLs(modalPendingFiles);
+            const read = await readFilesIntoIDB(modalPendingFiles);
             modalExistingAttachments = [...modalExistingAttachments, ...read];
             modalPendingFiles = [];
           } catch(e) {
@@ -2305,6 +2361,7 @@
         renderNotesList();
 
         await loadNotes();
+        await refreshAttachmentCache();
         recomputeTagCounts();
         renderNotesList();
         renderCalendar();
