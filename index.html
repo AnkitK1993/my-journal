@@ -1310,6 +1310,7 @@
       const REMINDER_SENT_KEY    = 'pregnancyReminderSentDate';
       const FIRESTORE_COLLECTION = 'pregnancy-notes';
       const MILESTONE_DATES_KEY  = 'milestoneDates';
+      const CLOUDINARY_CONFIG    = { cloudName: 'dlmgytv1h', uploadPreset: 'my-journal' };
 
       firebase.initializeApp(FIREBASE_CONFIG);
       const db = firebase.firestore();
@@ -1747,6 +1748,42 @@
           catch(e) { /* file missing — skip */ }
         }
       }
+      // ── CLOUDINARY UPLOAD ──
+      function uploadToCloudinary(file, onProgress) {
+        return new Promise((resolve, reject) => {
+          const fd = new FormData();
+          fd.append('file', file);
+          fd.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`);
+
+          xhr.upload.onprogress = e => {
+            if (e.lengthComputable && onProgress) onProgress(Math.round(e.loaded / e.total * 100));
+          };
+          xhr.onload = () => {
+            if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).secure_url);
+            else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`));
+          };
+          xhr.onerror = () => reject(new Error('Network error — check your connection.'));
+          xhr.send(fd);
+        });
+      }
+
+      async function processFiles(files, statusEl) {
+        const results = [];
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.size > MAX_FILE_BYTES) throw new Error(`"${file.name}" exceeds 10 MB.`);
+          if (statusEl) statusEl.textContent = `Uploading ${i + 1} of ${files.length}: ${file.name}…`;
+          const url = await uploadToCloudinary(file, pct => {
+            if (statusEl) statusEl.textContent = `Uploading ${i + 1} of ${files.length}: ${file.name} (${pct}%)`;
+          });
+          results.push({ name: file.name, type: file.type, url });
+        }
+        return results;
+      }
+
       async function readFilesIntoIDB(files) {
         const results = [];
         for (const file of files) {
@@ -2305,16 +2342,16 @@
         const statusEl = document.getElementById('attachStatus');
 
         if (modalPendingFiles.length) {
-          saveBtn.disabled    = true;
-          saveBtn.textContent = 'Processing…';
+          saveBtn.disabled       = true;
+          saveBtn.textContent    = 'Uploading…';
           statusEl.style.display = 'block';
-          statusEl.textContent   = `Reading ${modalPendingFiles.length} file(s)…`;
+          statusEl.textContent   = `Uploading ${modalPendingFiles.length} file(s)…`;
           try {
-            const read = await readFilesIntoIDB(modalPendingFiles);
-            modalExistingAttachments = [...modalExistingAttachments, ...read];
+            const uploaded = await processFiles(modalPendingFiles, statusEl);
+            modalExistingAttachments = [...modalExistingAttachments, ...uploaded];
             modalPendingFiles = [];
           } catch(e) {
-            statusEl.textContent = e.message || 'Could not read file. Please try again.';
+            statusEl.textContent = e.message || 'Upload failed. Please try again.';
             saveBtn.disabled    = false;
             saveBtn.textContent = 'Save';
             return;
