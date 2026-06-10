@@ -748,6 +748,81 @@
       }
       .note-attach-file:hover { border-color: var(--accent); }
 
+      /* ── NOTE ACTION ICON BUTTONS ── */
+      .note-actions { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+      .btn-icon {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        line-height: 1.5;
+        transition: border-color 0.2s, color 0.2s, background 0.2s;
+        flex-shrink: 0;
+      }
+      .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+      .btn-icon.btn-del:hover { border-color: var(--delete-color); color: var(--delete-color); }
+
+      /* ── UNDO TOAST ── */
+      .undo-toast {
+        position: fixed;
+        bottom: 28px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--bg-header);
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        padding: 13px 18px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        z-index: 3000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s, transform 0.2s;
+        min-width: 270px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      }
+      .undo-toast.visible {
+        opacity: 1;
+        pointer-events: all;
+        transform: translateX(-50%) translateY(0);
+      }
+      .undo-toast-msg { font-size: 0.82rem; color: var(--text-primary); flex: 1; }
+      .undo-toast-btn {
+        background: var(--accent);
+        color: #0a1428;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 14px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+      }
+      .undo-toast-btn:hover { opacity: 0.85; }
+      .undo-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        background: var(--accent);
+        width: 100%;
+      }
+      .undo-bar.running {
+        animation: undoCountdown 5s linear forwards;
+      }
+      @keyframes undoCountdown {
+        from { width: 100%; }
+        to   { width: 0%; }
+      }
+
       /* ── MODAL ── */
       .modal-backdrop {
         display: none;
@@ -919,6 +994,13 @@
       </div>
     </div>
 
+    <!-- UNDO TOAST -->
+    <div class="undo-toast" id="undoToast">
+      <span class="undo-toast-msg">Note deleted</span>
+      <button class="undo-toast-btn" onclick="undoDelete()">Undo</button>
+      <div class="undo-bar" id="undoBar"></div>
+    </div>
+
     <!-- MODAL -->
     <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
       <div class="modal">
@@ -1002,8 +1084,10 @@
       let tags                     = [];
       let activePanel              = null;
       let modalDate                = null;
-      let modalPendingFiles        = [];   // File objects chosen but not yet uploaded
-      let modalExistingAttachments = [];   // Already-saved {name,url,type} objects
+      let modalPendingFiles        = [];
+      let modalExistingAttachments = [];
+      let pendingDelete            = null;
+      let pendingDeleteTimer       = null;
 
       // ── UTILITY ──
       function dateToISO(d) {
@@ -1231,7 +1315,10 @@
                   <span class="notes-panel-date">${isoToDisplay(iso)}</span>
                   ${tagPillHtml(n.tag)}
                   ${costBadgeHtml(n.cost)}
-                  <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
+                  <div class="note-actions">
+                    <button class="btn-icon" onclick="openModal('${iso}')" title="Edit">✏️</button>
+                    <button class="btn-icon btn-del" onclick="deleteNote('${iso}')" title="Delete">🗑️</button>
+                  </div>
                 </div>
                 <div class="notes-panel-text">${escapeHtml(n.text)}</div>
                 ${attachmentsHtml(n.attachments)}
@@ -1265,6 +1352,10 @@
                   ${tagPillHtml(n.tag)}
                   ${costBadgeHtml(n.cost)}
                   <div class="appt-text">${escapeHtml(n.text)}</div>
+                  <div class="note-actions">
+                    <button class="btn-icon" onclick="openModal('${iso}')" title="Edit">✏️</button>
+                    <button class="btn-icon btn-del" onclick="deleteNote('${iso}')" title="Delete">🗑️</button>
+                  </div>
                 </div>
                 ${attachmentsHtml(n.attachments)}
               </div>`;
@@ -1491,7 +1582,10 @@
               <span class="note-date">${isoToDisplay(iso)}</span>
               ${tagPillHtml(n.tag)}
               ${costBadgeHtml(n.cost)}
-              <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
+              <div class="note-actions">
+                <button class="btn-icon" onclick="openModal('${iso}')" title="Edit">✏️</button>
+                <button class="btn-icon btn-del" onclick="deleteNote('${iso}')" title="Delete">🗑️</button>
+              </div>
             </div>
             <div class="note-text">${escapeHtml(n.text)}</div>
             ${attachmentsHtml(n.attachments)}`;
@@ -1506,10 +1600,52 @@
       }
 
       function deleteNote(iso) {
+        // Commit any previously pending delete before starting a new one
+        if (pendingDelete) {
+          clearTimeout(pendingDeleteTimer);
+          fbDelete(pendingDelete.iso);
+          cacheNotes();
+        }
+
+        pendingDelete = { iso, note: { ...notes[iso] } };
         delete notes[iso];
-        fbDelete(iso);
-        cacheNotes();
         refreshAll();
+        showUndoToast();
+
+        pendingDeleteTimer = setTimeout(() => {
+          if (pendingDelete) {
+            fbDelete(pendingDelete.iso);
+            cacheNotes();
+            pendingDelete = null;
+          }
+          hideUndoToast();
+        }, 5000);
+      }
+
+      function undoDelete() {
+        if (pendingDelete) {
+          notes[pendingDelete.iso] = pendingDelete.note;
+          pendingDelete = null;
+          clearTimeout(pendingDeleteTimer);
+          cacheNotes();
+          refreshAll();
+        }
+        hideUndoToast();
+      }
+
+      function showUndoToast() {
+        const toast = document.getElementById('undoToast');
+        const bar   = document.getElementById('undoBar');
+        bar.classList.remove('running');
+        // Force reflow to restart animation
+        void bar.offsetWidth;
+        bar.classList.add('running');
+        toast.classList.add('visible');
+      }
+
+      function hideUndoToast() {
+        document.getElementById('undoToast').classList.remove('visible');
+        document.getElementById('undoBar').classList.remove('running');
       }
 
       function addQuickNote() {
