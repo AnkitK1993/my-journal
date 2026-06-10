@@ -760,14 +760,7 @@
         letter-spacing: 0.5px;
       }
       .detail-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-      .tag-count-edit-btn {
-        background: none; border: 1px solid var(--border); border-radius: 4px;
-        color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
-        padding: 2px 6px; line-height: 1; align-items: center;
-        transition: color 0.2s, border-color 0.2s;
-      }
-      .tag-count-edit-btn:hover { color: var(--accent); border-color: var(--accent); }
-      .detail-body {
+.detail-body {
         font-size: 0.92rem;
         color: var(--text-primary);
         line-height: 1.8;
@@ -1094,15 +1087,7 @@
             <div class="detail-date" id="detailDate"></div>
             <div class="detail-meta">
               <span id="detailTag"></span>
-              <button id="detailTagCountEditBtn" class="tag-count-edit-btn" onclick="openTagCountEdit()" title="Edit count" style="display:none">✎</button>
               <span id="detailCost"></span>
-            </div>
-            <div id="detailTagCountEditRow" style="display:none;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-              <label style="color:var(--text-secondary);font-size:0.8rem">Count for <span id="detailTagCountTagName" style="color:var(--accent)"></span>:</label>
-              <input type="number" id="detailTagCountInput" min="0" step="1"
-                style="width:70px;padding:4px 8px;background:var(--bg-section);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:0.9rem">
-              <button class="btn btn-sm" onclick="saveDetailTagCount()">Save</button>
-              <button class="btn btn-cancel btn-sm" onclick="cancelDetailTagCount()">Cancel</button>
             </div>
           </div>
         </div>
@@ -1982,10 +1967,8 @@
         detailIso = iso;
 
         document.getElementById('detailDate').textContent = isoToDisplay(iso);
-        document.getElementById('detailTag').innerHTML    = tagPillHtml(n.tag, n.visitNum);
-        document.getElementById('detailTagCountEditBtn').style.display = n.tag ? 'inline-flex' : 'none';
-        document.getElementById('detailTagCountEditRow').style.display = 'none';
-        document.getElementById('detailCost').innerHTML   = costBadgeHtml(n.cost);
+        document.getElementById('detailTag').innerHTML  = tagPillHtml(n.tag, n.visitNum);
+        document.getElementById('detailCost').innerHTML = costBadgeHtml(n.cost);
 
         const body = document.getElementById('detailBody');
         if (n.text) { body.textContent = n.text; body.classList.remove('empty'); }
@@ -2015,37 +1998,6 @@
         if (e.target === document.getElementById('detailBackdrop')) closeNoteDetail();
       }
 
-      function openTagCountEdit() {
-        const n = notes[detailIso];
-        if (!n || !n.tag) return;
-        const current = n.visitNum || tagCounts[n.tag] || 1;
-        document.getElementById('detailTagCountInput').value = current;
-        document.getElementById('detailTagCountTagName').textContent = n.tag;
-        document.getElementById('detailTagCountEditRow').style.display = 'flex';
-        document.getElementById('detailTagCountEditBtn').style.display = 'none';
-        setTimeout(() => document.getElementById('detailTagCountInput').focus(), 50);
-      }
-
-      function saveDetailTagCount() {
-        const n = notes[detailIso];
-        if (!n || !n.tag) return;
-        const val = parseInt(document.getElementById('detailTagCountInput').value, 10);
-        if (!isNaN(val) && val >= 1) {
-          notes[detailIso] = { ...n, visitNum: val };
-          cacheNotes();
-          fbSave(detailIso, n.text, n.tag, n.cost, val);
-          document.getElementById('detailTag').innerHTML = tagPillHtml(n.tag, val);
-          renderNotesList();
-          if (activePanel) renderPanel(activePanel);
-        }
-        document.getElementById('detailTagCountEditRow').style.display = 'none';
-        document.getElementById('detailTagCountEditBtn').style.display = 'inline-flex';
-      }
-
-      function cancelDetailTagCount() {
-        document.getElementById('detailTagCountEditRow').style.display = 'none';
-        document.getElementById('detailTagCountEditBtn').style.display = 'inline-flex';
-      }
 
       // ── MODAL ──
       function openModal(iso) {
