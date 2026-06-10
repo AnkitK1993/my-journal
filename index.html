@@ -239,6 +239,77 @@
       .tag-manage-count { font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap; }
       .btn-sure { background: rgba(255,107,107,0.15); border-color: var(--delete-color) !important; color: var(--delete-color) !important; font-weight: 700; }
 
+      /* ── HISTORY PANEL ── */
+      .history-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-end;
+        margin-bottom: 16px;
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 14px;
+      }
+      .history-filter-group { display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+      .history-filter-label { font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+      .history-filter-group input,
+      .history-filter-group select {
+        background: var(--bg-header);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-primary);
+        padding: 7px 10px;
+        font-size: 0.8rem;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+        color-scheme: dark;
+      }
+      .history-filter-group input:focus,
+      .history-filter-group select:focus { border-color: var(--accent); }
+      .history-filter-group select {
+        appearance: none; -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300bfff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 28px;
+        cursor: pointer;
+      }
+      .history-filter-group select option { background: var(--bg-section); }
+      .history-summary {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .history-stat {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 18px;
+        text-align: center;
+        min-width: 110px;
+      }
+      .history-stat-val { font-size: 1.4rem; font-weight: 700; color: var(--accent); line-height: 1; }
+      .history-stat-val.cost-val { color: #4ade80; }
+      .history-stat-lbl { font-size: 0.68rem; color: var(--text-secondary); margin-top: 4px; }
+      .history-list { display: flex; flex-direction: column; gap: 8px; }
+      .history-item {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--border);
+        border-radius: 0 6px 6px 0;
+        padding: 11px 14px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+      .history-item:hover { border-color: var(--accent); }
+      .history-item-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+      .history-item-date { font-size: 0.78rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+      .history-item-text { font-size: 0.8rem; color: var(--text-secondary); word-break: break-word; }
+      .history-item-cost { font-size: 0.72rem; font-weight: 700; color: #4ade80; margin-left: auto; white-space: nowrap; flex-shrink: 0; }
+
       /* ── TAG PILL ── */
       .tag-pill {
         display: inline-block;
@@ -1028,6 +1099,7 @@
         <button class="nav-tab" data-panel="notes"        onclick="togglePanel('notes')">📝 Notes</button>
         <button class="nav-tab" data-panel="appointments" onclick="togglePanel('appointments')">📅 Upcoming Appointments</button>
         <button class="nav-tab" data-panel="tags"         onclick="togglePanel('tags')">🏷️ Tags</button>
+        <button class="nav-tab" data-panel="history"      onclick="togglePanel('history')">📋 History</button>
       </div>
     </nav>
 
@@ -1450,6 +1522,7 @@
         else if (id === 'notes')        renderNotesPanel(c);
         else if (id === 'appointments') renderApptsPanel(c);
         else if (id === 'tags')         renderTagsPanel(c);
+        else if (id === 'history')      renderHistoryPanel(c);
       }
 
       function renderDatesPanel(c) {
@@ -1775,7 +1848,8 @@
         recomputeTagCounts();
         renderNotesList();
         renderCalendar();
-        if (activePanel) renderPanel(activePanel);
+        if (activePanel === 'history') applyHistoryFilters();
+        else if (activePanel) renderPanel(activePanel);
       }
 
       function deleteNote(iso) {
@@ -1827,6 +1901,118 @@
         document.getElementById('undoBar').classList.remove('running');
       }
 
+
+      // ── HISTORY PANEL ──
+      function renderHistoryPanel(c) {
+        const tagOpts = ['<option value="">All Tags</option>',
+          ...tags.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`)
+        ].join('');
+
+        // Read current filter state from existing inputs (if panel already rendered)
+        const prev = {
+          text:    document.getElementById('hFilterText')?.value    || '',
+          tag:     document.getElementById('hFilterTag')?.value     || '',
+          from:    document.getElementById('hFilterFrom')?.value    || '',
+          to:      document.getElementById('hFilterTo')?.value      || '',
+          hasCost: document.getElementById('hFilterCost')?.value    || '',
+        };
+
+        c.innerHTML = `
+          <div class="panel-section-title">📋 History</div>
+          <div class="history-filters">
+            <div class="history-filter-group" style="flex:2;min-width:180px">
+              <label class="history-filter-label">Search</label>
+              <input id="hFilterText" type="text" placeholder="Search note text…" value="${escapeHtml(prev.text)}" oninput="applyHistoryFilters()" />
+            </div>
+            <div class="history-filter-group">
+              <label class="history-filter-label">Tag</label>
+              <select id="hFilterTag" onchange="applyHistoryFilters()">${tagOpts}</select>
+            </div>
+            <div class="history-filter-group">
+              <label class="history-filter-label">From</label>
+              <input id="hFilterFrom" type="date" value="${prev.from}" onchange="applyHistoryFilters()" />
+            </div>
+            <div class="history-filter-group">
+              <label class="history-filter-label">To</label>
+              <input id="hFilterTo" type="date" value="${prev.to}" onchange="applyHistoryFilters()" />
+            </div>
+            <div class="history-filter-group">
+              <label class="history-filter-label">Cost</label>
+              <select id="hFilterCost" onchange="applyHistoryFilters()">
+                <option value="">All</option>
+                <option value="yes">With Cost</option>
+                <option value="no">No Cost</option>
+              </select>
+            </div>
+          </div>
+          <div id="historyResults"></div>`;
+
+        // Restore filter values
+        if (prev.tag)     document.getElementById('hFilterTag').value     = prev.tag;
+        if (prev.hasCost) document.getElementById('hFilterCost').value    = prev.hasCost;
+
+        applyHistoryFilters();
+      }
+
+      function applyHistoryFilters() {
+        const textQ  = (document.getElementById('hFilterText')?.value  || '').toLowerCase();
+        const tagQ   = document.getElementById('hFilterTag')?.value    || '';
+        const fromQ  = document.getElementById('hFilterFrom')?.value   || '';
+        const toQ    = document.getElementById('hFilterTo')?.value     || '';
+        const costQ  = document.getElementById('hFilterCost')?.value   || '';
+
+        let entries = Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0]));
+
+        if (textQ)  entries = entries.filter(([,n]) => n.text.toLowerCase().includes(textQ));
+        if (tagQ)   entries = entries.filter(([,n]) => n.tag === tagQ);
+        if (fromQ)  entries = entries.filter(([iso]) => iso >= fromQ);
+        if (toQ)    entries = entries.filter(([iso]) => iso <= toQ);
+        if (costQ === 'yes') entries = entries.filter(([,n]) => n.cost && parseFloat(n.cost) > 0);
+        if (costQ === 'no')  entries = entries.filter(([,n]) => !n.cost || parseFloat(n.cost) === 0);
+
+        const totalCost = entries.reduce((s,[,n]) => s + (parseFloat(n.cost)||0), 0);
+        const countWithCost = entries.filter(([,n]) => parseFloat(n.cost) > 0).length;
+
+        const resultsEl = document.getElementById('historyResults');
+        if (!resultsEl) return;
+
+        const summary = `<div class="history-summary">
+          <div class="history-stat">
+            <div class="history-stat-val">${entries.length}</div>
+            <div class="history-stat-lbl">Notes</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-val cost-val">₹${totalCost.toLocaleString('en-IN')}</div>
+            <div class="history-stat-lbl">Total Cost</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-val">${countWithCost}</div>
+            <div class="history-stat-lbl">With Cost</div>
+          </div>
+        </div>`;
+
+        if (!entries.length) {
+          resultsEl.innerHTML = summary + '<div class="panel-empty">No notes match the filters.</div>';
+          return;
+        }
+
+        const items = entries.map(([iso, n]) => {
+          const bc    = n.tag ? tagColor(n.tag) : 'var(--border)';
+          const cost  = parseFloat(n.cost);
+          const costHtml = !isNaN(cost) && cost > 0
+            ? `<span class="history-item-cost">₹${cost.toLocaleString('en-IN')}</span>` : '';
+          return `<div class="history-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}')">
+            <div class="history-item-header">
+              <span class="history-item-date">${isoToDisplay(iso)}</span>
+              ${tagPillHtml(n.tag)}
+              ${costHtml}
+            </div>
+            <div class="history-item-text">${escapeHtml(n.text)}</div>
+          </div>`;
+        }).join('');
+
+        resultsEl.innerHTML = summary + `<div class="history-list">${items}</div>`;
+      }
 
       // ── TAG MANAGEMENT ──
       function renderTagsPanel(c) {
