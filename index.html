@@ -748,33 +748,87 @@
       }
       .note-attach-file:hover { border-color: var(--accent); }
 
-      /* ── NOTE ACTION ICON BUTTONS ── */
-      .note-actions {
+      /* ── CLICKABLE NOTE CARDS ── */
+      .note-item,
+      .notes-panel-item { cursor: pointer; }
+      .note-item:hover { background: var(--bg-section); }
+      .appt-item { cursor: pointer; }
+
+      /* ── NOTE DETAIL MODAL ── */
+      .detail-modal {
+        background: var(--bg-container);
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        padding: 28px;
+        width: 100%;
+        max-width: 560px;
+        max-height: 90vh;
+        overflow-y: auto;
         display: flex;
-        gap: 4px;
-        align-items: center;
-        flex-shrink: 0;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.15s;
+        flex-direction: column;
+        gap: 18px;
       }
-      .note-item:hover .note-actions,
-      .notes-panel-item:hover .note-actions,
-      .appt-item:hover .note-actions { opacity: 1; pointer-events: all; }
+      .detail-modal::-webkit-scrollbar { width: 4px; }
+      .detail-modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+      .detail-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 14px;
+      }
+      .detail-date {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 0.5px;
+      }
+      .detail-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+      .detail-body {
+        font-size: 0.92rem;
+        color: var(--text-primary);
+        line-height: 1.8;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: var(--bg-section);
+        border-radius: 6px;
+        padding: 14px 16px;
+        min-height: 64px;
+      }
+      .detail-body.empty { color: var(--text-secondary); font-style: italic; }
+      .detail-attach-section { display: flex; flex-direction: column; gap: 8px; }
+      .detail-attach-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .detail-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 4px;
+        border-top: 1px solid var(--border);
+      }
+      /* icon-style action buttons in detail */
       .btn-icon {
         background: none;
         border: 1px solid var(--border);
         border-radius: 4px;
         color: var(--text-secondary);
         cursor: pointer;
-        font-size: 0.75rem;
-        padding: 2px 6px;
-        line-height: 1.5;
-        transition: border-color 0.2s, color 0.2s, background 0.2s;
-        flex-shrink: 0;
+        font-size: 0.8rem;
+        padding: 6px 14px;
+        font-family: inherit;
+        font-weight: 600;
+        transition: border-color 0.2s, color 0.2s;
       }
       .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
-      .btn-icon.btn-del:hover { border-color: var(--delete-color); color: var(--delete-color); }
+      .btn-icon.btn-del { color: var(--delete-color); border-color: var(--delete-color); }
+      .btn-icon.btn-del:hover { background: rgba(255,107,107,0.1); }
 
       /* ── UNDO TOAST ── */
       .undo-toast {
@@ -1047,7 +1101,32 @@
       <div class="undo-bar" id="undoBar"></div>
     </div>
 
-    <!-- MODAL -->
+    <!-- NOTE DETAIL MODAL -->
+    <div class="modal-backdrop" id="detailBackdrop" onclick="handleDetailBackdropClick(event)">
+      <div class="detail-modal">
+        <div class="detail-header">
+          <div>
+            <div class="detail-date" id="detailDate"></div>
+            <div class="detail-meta">
+              <span id="detailTag"></span>
+              <span id="detailCost"></span>
+            </div>
+          </div>
+        </div>
+        <div class="detail-body" id="detailBody"></div>
+        <div class="detail-attach-section" id="detailAttachSection" style="display:none">
+          <div class="detail-attach-label">Attachments</div>
+          <div id="detailAttachments"></div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-cancel" onclick="closeNoteDetail()">Close</button>
+          <button class="btn-icon" onclick="editFromDetail()">✏️ Edit</button>
+          <button class="btn-icon btn-del" onclick="deleteFromDetail()">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT MODAL -->
     <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
       <div class="modal">
         <div class="modal-title" id="modalTitle">Add Note</div>
@@ -1142,6 +1221,7 @@
       let modalExistingAttachments = [];
       let pendingDelete            = null;
       let pendingDeleteTimer       = null;
+      let detailIso               = null;
 
       // ── UTILITY ──
       function dateToISO(d) {
@@ -1375,15 +1455,11 @@
           ? '<div class="panel-empty">No notes found.</div>'
           : `<div class="notes-panel-grid">${shown.map(([iso,n]) => {
               const bc = n.tag ? tagColor(n.tag) : 'var(--border)';
-              return `<div class="notes-panel-item" style="border-left-color:${bc}">
+              return `<div class="notes-panel-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}')">
                 <div class="notes-panel-row">
                   <span class="notes-panel-date">${isoToDisplay(iso)}</span>
                   ${tagPillHtml(n.tag)}
                   ${costBadgeHtml(n.cost)}
-                  <div class="note-actions">
-                    <button class="btn-icon" onclick="openModal('${iso}')" title="Edit">✏️</button>
-                    <button class="btn-icon btn-del" onclick="deleteNote('${iso}')" title="Delete">🗑️</button>
-                  </div>
                 </div>
                 <div class="notes-panel-text">${escapeHtml(n.text)}</div>
                 ${attachmentsHtml(n.attachments)}
@@ -1408,7 +1484,7 @@
           : `<div class="appts-list">${upcoming.map(([iso,n]) => {
               const diff = Math.round((new Date(iso+'T00:00:00')-today)/86400000);
               const cd   = diff===0?'Today':`in ${diff} day${diff!==1?'s':''}`;
-              return `<div class="appt-item">
+              return `<div class="appt-item" onclick="openNoteDetail('${iso}')">
                 <div class="appt-left">
                   <div class="appt-date">${isoToDisplay(iso)}</div>
                   <div class="appt-cd">${cd}</div>
@@ -1417,10 +1493,6 @@
                   ${tagPillHtml(n.tag)}
                   ${costBadgeHtml(n.cost)}
                   <div class="appt-text">${escapeHtml(n.text)}</div>
-                  <div class="note-actions">
-                    <button class="btn-icon" onclick="openModal('${iso}')" title="Edit">✏️</button>
-                    <button class="btn-icon btn-del" onclick="deleteNote('${iso}')" title="Delete">🗑️</button>
-                  </div>
                 </div>
                 ${attachmentsHtml(n.attachments)}
               </div>`;
@@ -1647,13 +1719,10 @@
               <span class="note-date">${isoToDisplay(iso)}</span>
               ${tagPillHtml(n.tag)}
               ${costBadgeHtml(n.cost)}
-              <div class="note-actions">
-                <button class="btn-icon" onclick="openModal('${iso}')" title="Edit">✏️</button>
-                <button class="btn-icon btn-del" onclick="deleteNote('${iso}')" title="Delete">🗑️</button>
-              </div>
             </div>
             <div class="note-text">${escapeHtml(n.text)}</div>
             ${attachmentsHtml(n.attachments)}`;
+          item.addEventListener('click', () => openNoteDetail(iso));
           list.appendChild(item);
         });
       }
@@ -1714,6 +1783,53 @@
         document.getElementById('undoBar').classList.remove('running');
       }
 
+
+      // ── NOTE DETAIL ──
+      function openNoteDetail(iso) {
+        const n = notes[iso];
+        if (!n) return;
+        detailIso = iso;
+
+        document.getElementById('detailDate').textContent = isoToDisplay(iso);
+        document.getElementById('detailTag').innerHTML    = tagPillHtml(n.tag);
+        document.getElementById('detailCost').innerHTML   = costBadgeHtml(n.cost);
+
+        const body = document.getElementById('detailBody');
+        if (n.text) { body.textContent = n.text; body.classList.remove('empty'); }
+        else        { body.textContent = 'No note text.'; body.classList.add('empty'); }
+
+        const attachSec = document.getElementById('detailAttachSection');
+        const attachEl  = document.getElementById('detailAttachments');
+        if (n.attachments && n.attachments.length) {
+          attachEl.innerHTML = attachmentsHtml(n.attachments);
+          attachSec.style.display = 'flex';
+        } else {
+          attachSec.style.display = 'none';
+        }
+
+        document.getElementById('detailBackdrop').classList.add('open');
+      }
+
+      function closeNoteDetail() {
+        document.getElementById('detailBackdrop').classList.remove('open');
+        detailIso = null;
+      }
+
+      function editFromDetail() {
+        const iso = detailIso;
+        closeNoteDetail();
+        openModal(iso);
+      }
+
+      function deleteFromDetail() {
+        const iso = detailIso;
+        closeNoteDetail();
+        deleteNote(iso);
+      }
+
+      function handleDetailBackdropClick(e) {
+        if (e.target === document.getElementById('detailBackdrop')) closeNoteDetail();
+      }
 
       // ── MODAL ──
       function openModal(iso) {
@@ -1800,7 +1916,9 @@
         if (e.target===document.getElementById('modalBackdrop')) closeModal();
       }
 
-      document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); }
+      });
 
       // ── INIT ──
       async function init() {
