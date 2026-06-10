@@ -1079,9 +1079,10 @@
       emailjs.init(EMAILJS_CONFIG.publicKey);
 
       // ── STATE ──
-      // notes[iso] = { text: string, tag: string, attachments: [{name,url,type}] }
+      // notes[iso] = { text: string, tag: string, cost: string, attachments: [{name,url,type}] }
       let notes                    = {};
       let tags                     = [];
+      let tagCounts                = {};  // { tagName: usageCount }
       let activePanel              = null;
       let modalDate                = null;
       let modalPendingFiles        = [];
@@ -1126,10 +1127,20 @@
         const i = tags.indexOf(tag);
         return TAG_COLORS[Math.max(0,i) % TAG_COLORS.length];
       }
+
+      function recomputeTagCounts() {
+        tagCounts = {};
+        Object.values(notes).forEach(n => {
+          if (n.tag) tagCounts[n.tag] = (tagCounts[n.tag] || 0) + 1;
+        });
+      }
+
       function tagPillHtml(tag) {
         if (!tag) return '';
-        const c = tagColor(tag);
-        return `<span class="tag-pill" style="background:${c}22;color:${c};border-color:${c}66">${escapeHtml(tag)}</span>`;
+        const c     = tagColor(tag);
+        const count = tagCounts[tag];
+        const label = count ? `${escapeHtml(tag)} · ${count}` : escapeHtml(tag);
+        return `<span class="tag-pill" style="background:${c}22;color:${c};border-color:${c}66">${label}</span>`;
       }
       function costBadgeHtml(cost) {
         if (!cost && cost !== 0) return '';
@@ -1145,7 +1156,8 @@
         sel.innerHTML = '<option value="">No tag</option>';
         tags.forEach(t => {
           const o = document.createElement('option');
-          o.value = t; o.textContent = t;
+          o.value = t;
+          o.textContent = tagCounts[t] ? `${t} (${tagCounts[t]})` : t;
           if (t === (selected !== undefined ? selected : cur)) o.selected = true;
           sel.appendChild(o);
         });
@@ -1594,6 +1606,7 @@
       }
 
       function refreshAll() {
+        recomputeTagCounts();
         renderNotesList();
         renderCalendar();
         if (activePanel) renderPanel(activePanel);
@@ -1750,6 +1763,7 @@
         renderNotesList();
 
         await loadNotes();
+        recomputeTagCounts();
         renderNotesList();
         renderCalendar();
         await checkAndSendReminders();
