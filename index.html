@@ -1228,11 +1228,12 @@
       .nav-caret { transition: transform 0.2s; }
       .nav-group.open > .nav-group-btn .nav-caret { transform: rotate(90deg); }
       .nav-dropdown {
-        position: absolute; top: 100%; left: 0;
+        position: fixed;
+        top: 56px;
+        left: 0;
         background: var(--bg-header);
         border: 1px solid var(--border-hot);
-        border-top: none;
-        border-radius: 0 0 3px 3px;
+        border-radius: 3px;
         min-width: 190px; z-index: 500;
         display: none; flex-direction: column;
         box-shadow: 0 12px 32px rgba(0,0,0,0.6);
@@ -2097,7 +2098,18 @@
         if (!el) return;
         const isOpen = el.classList.contains('open');
         closeAllNavDropdowns();
-        if (!isOpen) el.classList.add('open');
+        if (!isOpen) {
+          el.classList.add('open');
+          // Position dropdown using fixed coords so it never causes page overflow
+          const btn = el.querySelector('.nav-group-btn');
+          const rect = btn.getBoundingClientRect();
+          const dropdown = el.querySelector('.nav-dropdown');
+          dropdown.style.top = rect.bottom + 'px';
+          // Clamp left so the dropdown stays within the viewport
+          const dropW = dropdown.offsetWidth || 190;
+          const left  = Math.min(rect.left, window.innerWidth - dropW - 8);
+          dropdown.style.left = Math.max(8, left) + 'px';
+        }
       }
 
       function closeAllNavDropdowns() {
