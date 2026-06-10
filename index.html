@@ -1621,7 +1621,7 @@
               cell.appendChild(ind);
             }
 
-            cell.addEventListener('click', () => openModal(iso));
+            cell.addEventListener('click', () => notes[iso] ? openNoteDetail(iso) : openModal(iso));
             grid.appendChild(cell);
           }
           cursor.setDate(cursor.getDate()+7);
