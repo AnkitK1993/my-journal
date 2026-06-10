@@ -838,6 +838,8 @@
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+        cursor: pointer;
+        font-family: inherit;
       }
       .note-attach-file:hover { border-color: var(--accent); }
 
@@ -1696,7 +1698,7 @@
               <img src="${url}" alt="${escapeHtml(a.name)}" loading="lazy" />
             </a>`;
           }
-          return `<a href="${url}" download="${escapeHtml(a.name)}" class="note-attach-file">📎 ${escapeHtml(a.name)}</a>`;
+          return `<button class="note-attach-file" onclick='downloadFile(${JSON.stringify(url)}, ${JSON.stringify(a.name)})'>📎 ${escapeHtml(a.name)}</button>`;
         }).join('');
         return `<div class="note-attachments">${inner}</div>`;
       }
@@ -1813,23 +1815,48 @@
       // ── CLOUDINARY UPLOAD ──
       function uploadToCloudinary(file, onProgress) {
         return new Promise((resolve, reject) => {
-          const fd = new FormData();
-          fd.append('file', file);
-          fd.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+          // Read file into ArrayBuffer first — prevents 0-byte uploads on iOS
+          // where File objects from the picker have lazily-loaded data.
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Could not read file.'));
+          reader.onload = e => {
+            const blob = new Blob([e.target.result], { type: file.type || 'application/octet-stream' });
+            const fd = new FormData();
+            fd.append('file', blob, file.name);
+            fd.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
 
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`);
-
-          xhr.upload.onprogress = e => {
-            if (e.lengthComputable && onProgress) onProgress(Math.round(e.loaded / e.total * 100));
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`);
+            xhr.upload.onprogress = ev => {
+              if (ev.lengthComputable && onProgress) onProgress(Math.round(ev.loaded / ev.total * 100));
+            };
+            xhr.onload = () => {
+              if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).secure_url);
+              else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`));
+            };
+            xhr.onerror = () => reject(new Error('Network error — check your connection.'));
+            xhr.send(fd);
           };
-          xhr.onload = () => {
-            if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).secure_url);
-            else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`));
-          };
-          xhr.onerror = () => reject(new Error('Network error — check your connection.'));
-          xhr.send(fd);
+          reader.readAsArrayBuffer(file);
         });
+      }
+
+      async function downloadFile(url, name) {
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error('fetch failed');
+          const blob = await resp.blob();
+          const objUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = objUrl;
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(objUrl), 2000);
+        } catch {
+          window.open(url, '_blank');
+        }
       }
 
       async function processFiles(files, statusEl) {
