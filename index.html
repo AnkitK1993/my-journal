@@ -749,7 +749,18 @@
       .note-attach-file:hover { border-color: var(--accent); }
 
       /* ── NOTE ACTION ICON BUTTONS ── */
-      .note-actions { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+      .note-actions {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        flex-shrink: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s;
+      }
+      .note-item:hover .note-actions,
+      .notes-panel-item:hover .note-actions,
+      .appt-item:hover .note-actions { opacity: 1; pointer-events: all; }
       .btn-icon {
         background: none;
         border: 1px solid var(--border);
