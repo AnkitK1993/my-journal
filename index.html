@@ -722,127 +722,6 @@
       }
       .feature-desc { font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5; }
 
-      /* ── ATTACHMENTS ── */
-      .attach-area {
-        border: 1.5px dashed var(--border);
-        border-radius: 6px;
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        transition: border-color 0.2s;
-      }
-      .attach-area:hover { border-color: var(--accent); }
-      .attach-buttons { display: flex; gap: 8px; }
-      .attach-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--bg-section);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text-secondary);
-        font-family: inherit;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        padding: 6px 12px;
-        cursor: pointer;
-        transition: border-color 0.2s, color 0.2s;
-      }
-      .attach-btn:hover { border-color: var(--accent); color: var(--accent); }
-      .attach-previews { display: flex; flex-wrap: wrap; gap: 8px; }
-      .attach-thumb {
-        position: relative;
-        width: 68px;
-        height: 68px;
-        border-radius: 5px;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        flex-shrink: 0;
-        cursor: pointer;
-      }
-      .attach-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-      .attach-file-chip {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--bg-section);
-        border: 1px solid var(--border);
-        border-radius: 5px;
-        padding: 6px 10px;
-        font-size: 0.72rem;
-        color: var(--text-secondary);
-        max-width: 160px;
-      }
-      .attach-file-name {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex: 1;
-      }
-      .attach-remove {
-        position: absolute;
-        top: 3px;
-        right: 3px;
-        background: rgba(10,20,40,0.85);
-        border: 1px solid var(--border);
-        border-radius: 50%;
-        color: #ff6b6b;
-        font-size: 0.6rem;
-        width: 17px;
-        height: 17px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-        padding: 0;
-        flex-shrink: 0;
-      }
-      .attach-remove-chip {
-        background: none;
-        border: none;
-        color: #ff6b6b;
-        cursor: pointer;
-        font-size: 0.75rem;
-        line-height: 1;
-        padding: 0;
-        flex-shrink: 0;
-      }
-      .attach-status { font-size: 0.7rem; color: var(--accent); }
-      .note-attachments { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-      .note-attach-thumb {
-        width: 38px;
-        height: 38px;
-        border-radius: 3px;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        cursor: pointer;
-        flex-shrink: 0;
-      }
-      .note-attach-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-      .note-attach-file {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        border-radius: 3px;
-        padding: 3px 8px;
-        font-size: 0.68rem;
-        color: var(--accent);
-        text-decoration: none;
-        max-width: 120px;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        cursor: pointer;
-        font-family: inherit;
-      }
-      .note-attach-file:hover { border-color: var(--accent); }
-
       /* ── CLICKABLE NOTE CARDS ── */
       .note-item,
       .notes-panel-item { cursor: pointer; }
@@ -900,14 +779,6 @@
         min-height: 64px;
       }
       .detail-body.empty { color: var(--text-secondary); font-style: italic; }
-      .detail-attach-section { display: flex; flex-direction: column; gap: 8px; }
-      .detail-attach-label {
-        font-size: 0.7rem;
-        font-weight: 700;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
       .detail-actions {
         display: flex;
         gap: 10px;
@@ -1236,10 +1107,6 @@
           </div>
         </div>
         <div class="detail-body" id="detailBody"></div>
-        <div class="detail-attach-section" id="detailAttachSection" style="display:none">
-          <div class="detail-attach-label">Attachments</div>
-          <div id="detailAttachments"></div>
-        </div>
         <div class="detail-actions">
           <button class="btn btn-cancel" onclick="closeNoteDetail()">Close</button>
           <button class="btn-icon" onclick="editFromDetail()">✏️ Edit</button>
@@ -1284,19 +1151,6 @@
             <input type="number" id="modalCostInput" placeholder="Enter amount (optional)" min="0" step="any" />
           </div>
         </div>
-        <div class="modal-field">
-          <label class="modal-label">Attachments</label>
-          <div class="attach-area">
-            <div class="attach-buttons">
-              <button class="attach-btn" onclick="document.getElementById('modalFilePhoto').click()">📷 Photos</button>
-              <button class="attach-btn" onclick="document.getElementById('modalFileAny').click()">📎 Files</button>
-            </div>
-            <div class="attach-previews" id="modalAttachPreviews"></div>
-            <div class="attach-status" id="attachStatus" style="display:none"></div>
-          </div>
-          <input type="file" id="modalFilePhoto" multiple accept="image/*" style="display:none" onchange="handleFileSelect(event)" />
-          <input type="file" id="modalFileAny"   multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" style="display:none" onchange="handleFileSelect(event)" />
-        </div>
         <div class="modal-actions">
           <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
           <button class="btn" id="modalSaveBtn" onclick="saveModal()">Save</button>
@@ -1335,21 +1189,17 @@
       const REMINDER_SENT_KEY    = 'pregnancyReminderSentDate';
       const FIRESTORE_COLLECTION = 'pregnancy-notes';
       const MILESTONE_DATES_KEY  = 'milestoneDates';
-      const CLOUDINARY_CONFIG    = { cloudName: 'dlmgytv1h', uploadPreset: 'my-journal' };
-
       firebase.initializeApp(FIREBASE_CONFIG);
       const db = firebase.firestore();
       emailjs.init(EMAILJS_CONFIG.publicKey);
 
       // ── STATE ──
-      // notes[iso] = { text: string, tag: string, cost: string, attachments: [{name,url,type}] }
-      let notes                    = {};
-      let tags                     = [];
-      let tagCounts                = {};  // { tagName: usageCount }
-      let activePanel              = null;
-      let modalDate                = null;
-      let modalPendingFiles        = [];
-      let modalExistingAttachments = [];
+      // notes[iso] = { text: string, tag: string, cost: string, visitNum: number|null }
+      let notes       = {};
+      let tags        = [];
+      let tagCounts   = {};  // { tagName: usageCount }
+      let activePanel = null;
+      let modalDate   = null;
       let pendingDelete            = null;
       let pendingDeleteTimer       = null;
       let detailIso               = null;
@@ -1492,9 +1342,9 @@
 
       // ── NOTES PERSISTENCE ──
       function migrateNote(v) {
-        if (!v) return { text:'', tag:'', cost:'', attachments:[], visitNum:null };
-        if (typeof v === 'string') return { text:v, tag:'', cost:'', attachments:[], visitNum:null };
-        return { text: v.text||'', tag: v.tag||'', cost: v.cost||'', attachments: v.attachments||[], visitNum: v.visitNum||null };
+        if (!v) return { text:'', tag:'', cost:'', visitNum:null };
+        if (typeof v === 'string') return { text:v, tag:'', cost:'', visitNum:null };
+        return { text: v.text||'', tag: v.tag||'', cost: v.cost||'', visitNum: v.visitNum||null };
       }
 
       function loadLocalNotes() {
@@ -1512,7 +1362,7 @@
           notes = {};
           snap.forEach(doc => {
             const d = doc.data();
-            notes[doc.id] = { text: d.text||'', tag: d.tag||'', cost: d.cost||'', attachments: d.attachments||[] };
+            notes[doc.id] = migrateNote(d);
           });
           cacheNotes();
         } catch(e) { console.warn('Firestore load failed:', e); }
@@ -1520,10 +1370,9 @@
 
       function cacheNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 
-      function fbSave(iso, text, tag, cost, attachments, visitNum) {
+      function fbSave(iso, text, tag, cost, visitNum) {
         db.collection(FIRESTORE_COLLECTION).doc(iso).set({
           text, tag: tag||'', cost: cost||'', date: iso,
-          attachments: attachments||[],
           visitNum: visitNum || null,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }).catch(e => console.warn('Firestore save failed:', e));
@@ -1643,7 +1492,6 @@
                   ${tagPillHtml(n.tag, n.visitNum)}
                 </div>
                 <div class="notes-panel-text">${escapeHtml(n.text)}</div>
-                ${attachmentsHtml(n.attachments)}
               </div>`;
             }).join('')}</div>`;
 
@@ -1675,220 +1523,10 @@
                   ${costBadgeHtml(n.cost)}
                   <div class="appt-text">${escapeHtml(n.text)}</div>
                 </div>
-                ${attachmentsHtml(n.attachments)}
               </div>`;
             }).join('')}</div>`;
 
         c.innerHTML = `<div class="panel-section-title">📅 Upcoming Appointments</div>${items}`;
-      }
-
-      // ── ATTACHMENTS ──
-      function isImage(type) { return (type||'').startsWith('image/'); }
-
-      function resolveAttachUrl(a) {
-        return a.url || attachmentCache[a.localId] || '';
-      }
-      function attachmentsHtml(attachments) {
-        if (!attachments || !attachments.length) return '';
-        const inner = attachments.map(a => {
-          const url = resolveAttachUrl(a);
-          if (!url) return `<span class="note-attach-file" title="${escapeHtml(a.name)}">📎 ${escapeHtml(a.name)}</span>`;
-          if (isImage(a.type)) {
-            return `<a href="${url}" target="_blank" rel="noopener" class="note-attach-thumb">
-              <img src="${url}" alt="${escapeHtml(a.name)}" loading="lazy" />
-            </a>`;
-          }
-          return `<button class="note-attach-file" onclick='downloadFile(${JSON.stringify(url)}, ${JSON.stringify(a.name)})'>📎 ${escapeHtml(a.name)}</button>`;
-        }).join('');
-        return `<div class="note-attachments">${inner}</div>`;
-      }
-
-      function handleFileSelect(e) {
-        const files = Array.from(e.target.files);
-        e.target.value = '';
-        files.forEach(f => {
-          if (!modalPendingFiles.some(p => p.name===f.name && p.size===f.size)) {
-            modalPendingFiles.push(f);
-          }
-        });
-        renderAttachPreviews();
-      }
-
-      function removePending(idx) {
-        modalPendingFiles.splice(idx, 1);
-        renderAttachPreviews();
-      }
-
-      function removeExisting(idx) {
-        modalExistingAttachments.splice(idx, 1);
-        renderAttachPreviews();
-      }
-
-      function renderAttachPreviews() {
-        const area = document.getElementById('modalAttachPreviews');
-        let html = '';
-
-        modalExistingAttachments.forEach((a, i) => {
-          const url = resolveAttachUrl(a);
-          if (isImage(a.type) && url) {
-            html += `<div class="attach-thumb">
-              <a href="${url}" target="_blank"><img src="${url}" alt="${escapeHtml(a.name)}" /></a>
-              <button class="attach-remove" onclick="removeExisting(${i})" title="Remove">✕</button>
-            </div>`;
-          } else {
-            html += `<div class="attach-file-chip">
-              <span>📎</span>
-              <span class="attach-file-name" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</span>
-              <button class="attach-remove-chip" onclick="removeExisting(${i})" title="Remove">✕</button>
-            </div>`;
-          }
-        });
-
-        modalPendingFiles.forEach((f, i) => {
-          if (f.type.startsWith('image/')) {
-            const objUrl = URL.createObjectURL(f);
-            html += `<div class="attach-thumb" data-pending="${i}">
-              <img src="${objUrl}" alt="${escapeHtml(f.name)}" onload="URL.revokeObjectURL(this.src)" />
-              <button class="attach-remove" onclick="removePending(${i})" title="Remove">✕</button>
-            </div>`;
-          } else {
-            html += `<div class="attach-file-chip">
-              <span>📎</span>
-              <span class="attach-file-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
-              <button class="attach-remove-chip" onclick="removePending(${i})" title="Remove">✕</button>
-            </div>`;
-          }
-        });
-
-        area.innerHTML = html;
-      }
-
-      // ── INDEXEDDB FILE STORE ──
-      const IDB_NAME    = 'journalFiles';
-      const IDB_STORE   = 'attachments';
-      const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
-
-      let attachmentCache = {}; // localId → dataURL (in-memory, for sync rendering)
-
-      function openIDB() {
-        return new Promise((resolve, reject) => {
-          const req = indexedDB.open(IDB_NAME, 1);
-          req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
-          req.onsuccess = e => resolve(e.target.result);
-          req.onerror   = e => reject(e.target.error);
-        });
-      }
-      async function idbSave(id, name, type, dataUrl) {
-        const db = await openIDB();
-        return new Promise((resolve, reject) => {
-          const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put({ id, name, type, dataUrl });
-          req.onsuccess = () => resolve();
-          req.onerror   = () => reject(req.error);
-        });
-      }
-      async function idbGet(id) {
-        const db = await openIDB();
-        return new Promise((resolve, reject) => {
-          const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(id);
-          req.onsuccess = () => resolve(req.result);
-          req.onerror   = () => reject(req.error);
-        });
-      }
-      async function idbDelete(id) {
-        const db = await openIDB();
-        return new Promise((resolve, reject) => {
-          const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(id);
-          req.onsuccess = () => resolve();
-          req.onerror   = () => reject(req.error);
-        });
-      }
-      async function refreshAttachmentCache() {
-        const ids = [];
-        Object.values(notes).forEach(n => (n.attachments||[]).forEach(a => {
-          if (a.localId && !attachmentCache[a.localId]) ids.push(a.localId);
-        }));
-        for (const id of ids) {
-          try { const rec = await idbGet(id); if (rec) attachmentCache[id] = rec.dataUrl; }
-          catch(e) { /* file missing — skip */ }
-        }
-      }
-      // ── CLOUDINARY UPLOAD ──
-      function uploadToCloudinary(file, onProgress) {
-        return new Promise((resolve, reject) => {
-          // Read file into ArrayBuffer first — prevents 0-byte uploads on iOS
-          // where File objects from the picker have lazily-loaded data.
-          const reader = new FileReader();
-          reader.onerror = () => reject(new Error('Could not read file.'));
-          reader.onload = e => {
-            const blob = new Blob([e.target.result], { type: file.type || 'application/octet-stream' });
-            const fd = new FormData();
-            fd.append('file', blob, file.name);
-            fd.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`);
-            xhr.upload.onprogress = ev => {
-              if (ev.lengthComputable && onProgress) onProgress(Math.round(ev.loaded / ev.total * 100));
-            };
-            xhr.onload = () => {
-              if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).secure_url);
-              else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`));
-            };
-            xhr.onerror = () => reject(new Error('Network error — check your connection.'));
-            xhr.send(fd);
-          };
-          reader.readAsArrayBuffer(file);
-        });
-      }
-
-      async function downloadFile(url, name) {
-        try {
-          const resp = await fetch(url);
-          if (!resp.ok) throw new Error('fetch failed');
-          const blob = await resp.blob();
-          const objUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = objUrl;
-          a.download = name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(objUrl), 2000);
-        } catch {
-          window.open(url, '_blank');
-        }
-      }
-
-      async function processFiles(files, statusEl) {
-        const results = [];
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          if (file.size > MAX_FILE_BYTES) throw new Error(`"${file.name}" exceeds 10 MB.`);
-          if (statusEl) statusEl.textContent = `Uploading ${i + 1} of ${files.length}: ${file.name}…`;
-          const url = await uploadToCloudinary(file, pct => {
-            if (statusEl) statusEl.textContent = `Uploading ${i + 1} of ${files.length}: ${file.name} (${pct}%)`;
-          });
-          results.push({ name: file.name, type: file.type, url });
-        }
-        return results;
-      }
-
-      async function readFilesIntoIDB(files) {
-        const results = [];
-        for (const file of files) {
-          if (file.size > MAX_FILE_BYTES) throw new Error(`"${file.name}" exceeds 10 MB.`);
-          const dataUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload  = e => resolve(e.target.result);
-            reader.onerror = () => reject(new Error(`Could not read "${file.name}"`));
-            reader.readAsDataURL(file);
-          });
-          const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-          await idbSave(id, file.name, file.type, dataUrl);
-          attachmentCache[id] = dataUrl;
-          results.push({ name: file.name, type: file.type, localId: id });
-        }
-        return results;
       }
 
       // ── CALENDAR ──
@@ -2021,8 +1659,7 @@
               <span class="note-date">${isoToDisplay(iso)}</span>
               ${tagPillHtml(n.tag, n.visitNum)}
             </div>
-            <div class="note-text">${escapeHtml(n.text)}</div>
-            ${attachmentsHtml(n.attachments)}`;
+            <div class="note-text">${escapeHtml(n.text)}</div>`;
           item.addEventListener('click', () => openNoteDetail(iso));
           list.appendChild(item);
         });
@@ -2037,22 +1674,19 @@
       }
 
       function deleteNote(iso) {
-        // Commit any previously pending delete before starting a new one
         if (pendingDelete) {
           clearTimeout(pendingDeleteTimer);
-          (pendingDelete.note.attachments||[]).forEach(a => { if (a.localId) idbDelete(a.localId).catch(()=>{}); });
           fbDelete(pendingDelete.iso);
           cacheNotes();
         }
 
-        pendingDelete = { iso, note: { ...notes[iso], attachments: [...(notes[iso]?.attachments||[])] } };
+        pendingDelete = { iso, note: { ...notes[iso] } };
         delete notes[iso];
         refreshAll();
         showUndoToast();
 
         pendingDeleteTimer = setTimeout(() => {
           if (pendingDelete) {
-            (pendingDelete.note.attachments||[]).forEach(a => { if (a.localId) idbDelete(a.localId).catch(()=>{}); });
             fbDelete(pendingDelete.iso);
             cacheNotes();
             pendingDelete = null;
@@ -2267,7 +1901,7 @@
           Object.keys(notes).forEach(iso => {
             if (notes[iso].tag === editingTag) {
               notes[iso] = { ...notes[iso], tag: newName };
-              fbSave(iso, notes[iso].text, newName, notes[iso].cost, notes[iso].attachments, notes[iso].visitNum);
+              fbSave(iso, notes[iso].text, newName, notes[iso].cost, notes[iso].visitNum);
             }
           });
           cacheNotes();
@@ -2300,7 +1934,7 @@
         Object.keys(notes).forEach(iso => {
           if (notes[iso].tag === tag) {
             notes[iso] = { ...notes[iso], tag: '', visitNum: null };
-            fbSave(iso, notes[iso].text, '', notes[iso].cost, notes[iso].attachments, null);
+            fbSave(iso, notes[iso].text, '', notes[iso].cost, null);
           }
         });
         cacheNotes();
@@ -2357,15 +1991,6 @@
         if (n.text) { body.textContent = n.text; body.classList.remove('empty'); }
         else        { body.textContent = 'No note text.'; body.classList.add('empty'); }
 
-        const attachSec = document.getElementById('detailAttachSection');
-        const attachEl  = document.getElementById('detailAttachments');
-        if (n.attachments && n.attachments.length) {
-          attachEl.innerHTML = attachmentsHtml(n.attachments);
-          attachSec.style.display = 'flex';
-        } else {
-          attachSec.style.display = 'none';
-        }
-
         document.getElementById('detailBackdrop').classList.add('open');
       }
 
@@ -2408,7 +2033,7 @@
         if (!isNaN(val) && val >= 1) {
           notes[detailIso] = { ...n, visitNum: val };
           cacheNotes();
-          fbSave(detailIso, n.text, n.tag, n.cost, n.attachments, val);
+          fbSave(detailIso, n.text, n.tag, n.cost, val);
           document.getElementById('detailTag').innerHTML = tagPillHtml(n.tag, val);
           renderNotesList();
           if (activePanel) renderPanel(activePanel);
@@ -2424,9 +2049,7 @@
 
       // ── MODAL ──
       function openModal(iso) {
-        modalDate                = iso;
-        modalPendingFiles        = [];
-        modalExistingAttachments = (notes[iso] && notes[iso].attachments) ? [...notes[iso].attachments] : [];
+        modalDate = iso;
         const n = notes[iso];
         const isEdit = !!n;
         document.getElementById('modalTitle').textContent = isEdit ? 'Edit Note' : 'Add Note';
@@ -2435,7 +2058,6 @@
         document.getElementById('modalCostInput').value   = n ? (n.cost || '') : '';
         populateTagSelect('modalTagSelect', n ? n.tag : '');
         document.getElementById('newTagRow').classList.remove('visible');
-        document.getElementById('attachStatus').style.display = 'none';
         document.getElementById('modalSaveBtn').textContent = 'Save';
         document.getElementById('modalSaveBtn').disabled    = false;
         // Visit number field — keep in sync with dropdown brackets
@@ -2448,7 +2070,6 @@
           document.getElementById('visitNumRow').style.display = 'none';
           document.getElementById('modalVisitNum').value = '';
         }
-        renderAttachPreviews();
         document.getElementById('modalBackdrop').classList.add('open');
         document.getElementById('modalTextarea').focus();
       }
@@ -2459,12 +2080,10 @@
 
       function closeModal() {
         document.getElementById('modalBackdrop').classList.remove('open');
-        modalDate                = null;
-        modalPendingFiles        = [];
-        modalExistingAttachments = [];
+        modalDate = null;
       }
 
-      async function saveModal() {
+      function saveModal() {
         const text   = document.getElementById('modalTextarea').value.trim();
         const tagVal = document.getElementById('modalTagSelect').value;
         const tag    = tagVal==='__new__' ? '' : tagVal;
@@ -2473,38 +2092,16 @@
         const visitNum = tag && !isNaN(visitNumRaw) && visitNumRaw >= 1 ? visitNumRaw : null;
         if (!modalDate) return;
 
-        const saveBtn  = document.getElementById('modalSaveBtn');
-        const statusEl = document.getElementById('attachStatus');
+        const saveIso = document.getElementById('modalDateInput').value || modalDate;
 
-        if (modalPendingFiles.length) {
-          saveBtn.disabled       = true;
-          saveBtn.textContent    = 'Uploading…';
-          statusEl.style.display = 'block';
-          statusEl.textContent   = `Uploading ${modalPendingFiles.length} file(s)…`;
-          try {
-            const uploaded = await processFiles(modalPendingFiles, statusEl);
-            modalExistingAttachments = [...modalExistingAttachments, ...uploaded];
-            modalPendingFiles = [];
-          } catch(e) {
-            statusEl.textContent = e.message || 'Upload failed. Please try again.';
-            saveBtn.disabled    = false;
-            saveBtn.textContent = 'Save';
-            return;
-          }
-        }
-
-        const saveIso    = document.getElementById('modalDateInput').value || modalDate;
-        const attachments = modalExistingAttachments;
-
-        // If date changed while editing, remove the old entry
         if (modalDate && saveIso !== modalDate) {
           delete notes[modalDate];
           fbDelete(modalDate);
         }
 
-        if (text || attachments.length || cost) {
-          notes[saveIso] = { text, tag, cost, attachments, visitNum };
-          fbSave(saveIso, text, tag, cost, attachments, visitNum);
+        if (text || cost) {
+          notes[saveIso] = { text, tag, cost, visitNum };
+          fbSave(saveIso, text, tag, cost, visitNum);
         } else {
           delete notes[saveIso];
           fbDelete(saveIso);
@@ -2533,7 +2130,6 @@
         renderNotesList();
 
         await loadNotes();
-        await refreshAttachmentCache();
         recomputeTagCounts();
         renderNotesList();
         renderCalendar();
