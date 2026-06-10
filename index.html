@@ -5,15 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Journal</title>
 
-    <!-- Firebase (compat SDK) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-    <!-- EmailJS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <style>
-      /* ===== RESET & BASE ===== */
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
       :root {
@@ -39,55 +35,253 @@
         line-height: 1.5;
       }
 
-      /* ===== HEADER ===== */
+      /* ── HEADER ── */
       header {
         background: var(--bg-container);
         border-bottom: 2px solid var(--accent);
-        padding: 24px 32px;
+        padding: 18px 32px;
         text-align: center;
       }
-
       header h1 {
-        font-size: 2rem;
+        font-size: 1.7rem;
         font-weight: 700;
         color: var(--accent);
         letter-spacing: 1px;
         text-transform: uppercase;
       }
+      header p { color: var(--text-secondary); margin-top: 4px; font-size: 0.88rem; }
 
-      header p {
+      /* ── TOP NAV ── */
+      .top-nav {
+        background: var(--bg-container);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 200;
+      }
+      .top-nav-inner {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 16px;
+        display: flex;
+        overflow-x: auto;
+      }
+      .nav-tab {
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
         color: var(--text-secondary);
-        margin-top: 6px;
-        font-size: 0.95rem;
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 13px 22px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: color 0.2s, border-color 0.2s;
+      }
+      .nav-tab:hover { color: var(--accent); }
+      .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+      /* ── PANEL DRAWER ── */
+      .panel-drawer {
+        display: none;
+        background: var(--bg-container);
+        border-bottom: 1px solid var(--border);
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .panel-drawer.open { display: block; }
+      .panel-drawer::-webkit-scrollbar { width: 4px; }
+      .panel-drawer::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+      .panel-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 18px 16px;
+      }
+      .panel-section-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 14px;
+      }
+      .panel-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .panel-empty {
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        padding: 20px;
+        text-align: center;
       }
 
-      /* ===== MAIN WRAPPER ===== */
+      /* Dates panel */
+      .dates-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+      }
+      .dates-item {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 6px 6px 0;
+        padding: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        transition: border-color 0.2s;
+      }
+      .dates-item:hover { border-color: var(--accent); }
+      .dates-item.past { opacity: 0.5; }
+      .dates-item-icon { font-size: 1.3rem; line-height: 1; margin-top: 1px; }
+      .dates-item-label { font-size: 0.76rem; font-weight: 700; color: var(--accent); }
+      .dates-item-date  { font-size: 0.78rem; color: var(--text-primary); margin-top: 3px; }
+      .dates-item-cd    { font-size: 0.68rem; color: var(--text-secondary); margin-top: 2px; }
+
+      /* Notes panel */
+      .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+      .filter-btn {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text-secondary);
+        font-family: inherit;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        padding: 4px 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .filter-btn:hover, .filter-btn.active { border-color: var(--accent); color: var(--accent); }
+
+      .notes-panel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+        gap: 10px;
+      }
+      .notes-panel-item {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--border);
+        border-radius: 0 6px 6px 0;
+        padding: 11px;
+      }
+      .notes-panel-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 5px;
+      }
+      .notes-panel-date {
+        font-size: 0.73rem;
+        color: var(--accent);
+        font-weight: 700;
+        flex: 1;
+      }
+      .notes-panel-text { font-size: 0.8rem; color: var(--text-secondary); word-break: break-word; }
+
+      /* Appointments panel */
+      .appts-list { display: flex; flex-direction: column; gap: 8px; }
+      .appt-item {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 12px 16px;
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+      .appt-left { min-width: 110px; }
+      .appt-date { font-size: 0.78rem; font-weight: 700; color: var(--accent); }
+      .appt-cd   { font-size: 0.68rem; color: var(--text-secondary); margin-top: 2px; }
+      .appt-right { flex: 1; display: flex; align-items: center; gap: 10px; }
+      .appt-text  { font-size: 0.8rem; color: var(--text-secondary); flex: 1; }
+
+      /* ── TAG PILL ── */
+      .tag-pill {
+        display: inline-block;
+        font-size: 0.6rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 8px;
+        border: 1px solid;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      /* ── SHARED SELECT STYLE ── */
+      .styled-select {
+        width: 100%;
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-primary);
+        padding: 8px 28px 8px 10px;
+        font-size: 0.82rem;
+        font-family: inherit;
+        outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300bfff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+      .styled-select:focus { border-color: var(--accent); }
+      .styled-select option { background: var(--bg-section); }
+
+      /* new-tag inline row */
+      .new-tag-row {
+        display: none;
+        gap: 8px;
+        align-items: center;
+        margin-top: 6px;
+      }
+      .new-tag-row.visible { display: flex; }
+      .new-tag-row input {
+        flex: 1;
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-primary);
+        padding: 7px 10px;
+        font-size: 0.82rem;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .new-tag-row input:focus { border-color: var(--accent); }
+
+      /* ── MAIN WRAPPER ── */
       .wrapper {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 24px 16px;
+        padding: 22px 16px;
       }
-
-      /* ===== TWO-COLUMN LAYOUT ===== */
       .main-grid {
         display: grid;
         grid-template-columns: 1fr 300px;
         gap: 24px;
         align-items: start;
       }
+      @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
 
-      @media (max-width: 1024px) {
-        .main-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      /* ===== CALENDAR AREA ===== */
-      .calendar-column {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
+      /* ── CALENDAR ── */
+      .calendar-column { display: flex; flex-direction: column; gap: 16px; }
 
       .month-selector-row {
         display: flex;
@@ -98,23 +292,21 @@
         border-radius: 8px;
         padding: 12px 16px;
       }
-
       .month-selector-row label {
-        font-size: 0.85rem;
-        font-weight: 600;
+        font-size: 0.82rem;
+        font-weight: 700;
         color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         white-space: nowrap;
       }
-
       #monthDropdown {
         flex: 1;
         background: var(--bg-section);
         color: var(--text-primary);
         border: 1px solid var(--border);
         border-radius: 6px;
-        padding: 8px 12px;
+        padding: 8px 32px 8px 12px;
         font-size: 0.95rem;
         font-family: inherit;
         cursor: pointer;
@@ -124,30 +316,21 @@
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300bfff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
         background-repeat: no-repeat;
         background-position: right 12px center;
-        padding-right: 32px;
         transition: border-color 0.2s;
       }
-
       #monthDropdown:hover, #monthDropdown:focus { border-color: var(--accent); }
-
       #monthDropdown option { background: var(--bg-section); }
 
-      .calendar-area {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
+      .calendar-area { display: flex; flex-direction: column; gap: 20px; }
 
       .month-card {
         background: var(--bg-container);
         border: 1px solid var(--border);
         border-radius: 8px;
         padding: 16px;
-        transition: border-color 0.2s ease;
+        transition: border-color 0.2s;
       }
-
       .month-card:hover { border-color: var(--accent); }
-
       .month-title {
         font-size: 1rem;
         font-weight: 700;
@@ -156,14 +339,11 @@
         letter-spacing: 1px;
         margin-bottom: 12px;
       }
-
-      /* 8 columns: week-num + Mon-Sun */
       .cal-grid {
         display: grid;
         grid-template-columns: 44px repeat(7, 1fr);
         gap: 2px;
       }
-
       .cal-header-cell {
         text-align: center;
         font-size: 0.7rem;
@@ -173,13 +353,7 @@
         letter-spacing: 0.5px;
         padding: 6px 2px;
       }
-
-      .week-num-header {
-        color: var(--accent);
-        background: #0d1f2d;
-        border-radius: 4px;
-      }
-
+      .week-num-header { color: var(--accent); background: #0d1f2d; border-radius: 4px; }
       .week-num-cell {
         color: var(--accent);
         background: #0d1f2d;
@@ -192,7 +366,6 @@
         text-transform: uppercase;
         cursor: default;
       }
-
       .day-cell {
         aspect-ratio: 1;
         background: var(--bg-section);
@@ -204,33 +377,16 @@
         flex-direction: column;
         padding: 4px;
         overflow: hidden;
-        transition: border-color 0.2s ease, background 0.2s ease;
+        transition: border-color 0.2s, background 0.2s;
         min-height: 44px;
       }
-
-      .day-cell:hover {
-        border-color: var(--accent);
-        background: #1a2f3f;
-      }
-
+      .day-cell:hover { border-color: var(--accent); background: #1a2f3f; }
       .day-cell.other-month { opacity: 0.3; }
-
-      .day-cell.today {
-        background: var(--accent);
-        border-color: var(--accent);
-      }
-
-      .day-cell.today .day-number { color: #0a1428; }
-      .day-cell.today .trimester-badge { color: #0a1428; }
+      .day-cell.today { background: var(--accent); border-color: var(--accent); }
+      .day-cell.today .day-number,
+      .day-cell.today .trimester-badge,
       .day-cell.today .note-indicator { color: #0a1428; }
-
-      .day-number {
-        font-size: 0.72rem;
-        font-weight: 700;
-        color: var(--accent);
-        line-height: 1;
-      }
-
+      .day-number { font-size: 0.72rem; font-weight: 700; color: var(--accent); line-height: 1; }
       .trimester-badge {
         font-size: 0.55rem;
         font-weight: 600;
@@ -240,40 +396,29 @@
         display: inline-block;
         line-height: 1.4;
       }
-
       .badge-t1 { background: rgba(255,107,157,0.25); color: var(--t1-color); }
       .badge-t2 { background: rgba(78,205,196,0.25);  color: var(--t2-color); }
       .badge-t3 { background: rgba(69,183,209,0.25);  color: var(--t3-color); }
+      .note-indicator { position: absolute; bottom: 2px; right: 3px; font-size: 0.6rem; line-height: 1; }
 
-      .note-indicator {
-        position: absolute;
-        bottom: 2px;
-        right: 3px;
-        font-size: 0.6rem;
-        line-height: 1;
-      }
-
-      /* ===== SIDEBAR ===== */
+      /* ── SIDEBAR ── */
       .sidebar {
         display: flex;
         flex-direction: column;
         gap: 16px;
         position: sticky;
-        top: 16px;
+        top: 50px;
       }
-
       .section-card {
         background: var(--bg-section);
         border: 1px solid var(--border);
         border-radius: 6px;
         padding: 18px;
-        transition: border-color 0.2s ease;
+        transition: border-color 0.2s;
       }
-
       .section-card:hover { border-color: var(--accent); }
-
       .section-title {
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 700;
         color: var(--accent);
         text-transform: uppercase;
@@ -281,93 +426,28 @@
         margin-bottom: 14px;
       }
 
-      /* PROGRESS */
-      .stat-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
+      /* Progress */
+      .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .stat-box { background: var(--bg-header); border-radius: 6px; padding: 12px; text-align: center; }
+      .stat-number { font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1; }
+      .stat-label  { font-size: 0.72rem; color: var(--text-secondary); margin-top: 4px; }
 
-      .stat-box {
-        background: var(--bg-header);
-        border-radius: 6px;
-        padding: 12px;
-        text-align: center;
-      }
-
-      .stat-number {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--accent);
-        line-height: 1;
-      }
-
-      .stat-label {
-        font-size: 0.72rem;
-        color: var(--text-secondary);
-        margin-top: 4px;
-      }
-
-      /* TRIMESTER CARDS */
+      /* Trimesters */
       .trimester-card {
         background: var(--bg-header);
         border: 1px solid var(--border);
         border-radius: 6px;
-        padding: 12px 12px 12px 14px;
+        padding: 11px 11px 11px 13px;
         margin-bottom: 8px;
-        border-left-width: 3px;
-        border-left-style: solid;
+        border-left: 3px solid;
       }
-
       .trimester-card:last-child { margin-bottom: 0; }
+      .trimester-name { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+      .trimester-desc { font-size: 0.73rem; color: var(--text-secondary); margin-top: 3px; }
 
-      .trimester-name {
-        font-size: 0.82rem;
-        font-weight: 700;
-        color: var(--accent);
-      }
-
-      .trimester-desc {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        margin-top: 4px;
-      }
-
-      /* IMPORTANT DATES */
-      .date-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 8px 8px 12px;
-        border-left: 3px solid var(--accent);
-        margin-bottom: 8px;
-        background: var(--bg-header);
-        border-radius: 0 4px 4px 0;
-      }
-
-      .date-item:last-child { margin-bottom: 0; }
-
-      .date-icon { font-size: 1rem; }
-
-      .date-label {
-        font-size: 0.75rem;
-        color: var(--accent);
-        font-weight: 600;
-        flex: 1;
-      }
-
-      .date-value {
-        font-size: 0.72rem;
-        color: var(--text-secondary);
-      }
-
-      /* NOTES */
-      .notes-input-row {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-
+      /* Sidebar notes */
+      .notes-input-area { margin-bottom: 10px; }
+      .notes-input-row  { display: flex; gap: 8px; margin-bottom: 6px; }
       .notes-input-row input {
         flex: 1;
         background: var(--bg-header);
@@ -378,21 +458,18 @@
         font-size: 0.8rem;
         font-family: inherit;
         outline: none;
-        transition: border-color 0.2s ease;
+        transition: border-color 0.2s;
       }
-
       .notes-input-row input:focus { border-color: var(--accent); }
 
       .notes-list {
-        max-height: 300px;
+        max-height: 240px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 6px;
       }
-
       .notes-list::-webkit-scrollbar { width: 4px; }
-      .notes-list::-webkit-scrollbar-track { background: var(--bg-header); }
       .notes-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
       .note-item {
@@ -401,35 +478,15 @@
         padding: 8px 10px;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 3px;
+        border-left: 3px solid var(--border);
       }
+      .note-item-header { display: flex; align-items: center; gap: 6px; }
+      .note-date { font-size: 0.7rem; color: var(--accent); font-weight: 700; flex: 1; }
+      .note-text { font-size: 0.76rem; color: var(--text-secondary); word-break: break-word; }
+      .notes-empty { font-size: 0.78rem; color: var(--text-secondary); text-align: center; padding: 12px; }
 
-      .note-item-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .note-date {
-        font-size: 0.72rem;
-        color: var(--accent);
-        font-weight: 600;
-      }
-
-      .note-text {
-        font-size: 0.78rem;
-        color: var(--text-secondary);
-        word-break: break-word;
-      }
-
-      .notes-empty {
-        font-size: 0.78rem;
-        color: var(--text-secondary);
-        text-align: center;
-        padding: 12px;
-      }
-
-      /* ===== BUTTONS ===== */
+      /* ── BUTTONS ── */
       .btn {
         background: var(--accent);
         color: #0a1428;
@@ -442,108 +499,81 @@
         letter-spacing: 0.5px;
         cursor: pointer;
         font-family: inherit;
-        transition: transform 0.2s ease, opacity 0.2s ease;
+        transition: transform 0.2s, opacity 0.2s;
         min-height: 44px;
       }
-
       .btn:hover { transform: translateY(-1px); opacity: 0.9; }
       .btn:active { transform: translateY(0); }
-
-      .btn-sm {
-        padding: 4px 8px;
-        font-size: 0.7rem;
-        min-height: 28px;
+      .btn-sm { padding: 4px 8px; font-size: 0.7rem; min-height: 28px; }
+      .btn-delete { background: var(--delete-color); color: #fff; }
+      .btn-cancel {
+        background: var(--bg-header);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
       }
+      .btn-cancel:hover { border-color: var(--accent); color: var(--accent); }
 
-      .btn-delete {
-        background: var(--delete-color);
-        color: #fff;
-      }
-
-      /* ===== FEATURE CARDS ===== */
-      .feature-section {
-        margin-top: 32px;
-      }
-
-      .feature-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-      }
-
-      @media (max-width: 800px) {
-        .feature-grid { grid-template-columns: repeat(2, 1fr); }
-      }
-
+      /* ── FEATURE CARDS ── */
+      .feature-section { margin-top: 30px; }
+      .feature-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+      @media (max-width: 800px) { .feature-grid { grid-template-columns: repeat(2, 1fr); } }
       @media (max-width: 480px) {
         .feature-grid { grid-template-columns: 1fr; }
         .wrapper { padding: 12px; }
-        header { padding: 18px 16px; }
-        header h1 { font-size: 1.4rem; }
+        header { padding: 14px 16px; }
+        header h1 { font-size: 1.3rem; }
+        .nav-tab { padding: 11px 14px; font-size: 0.7rem; }
       }
-
       .feature-card {
         background: var(--bg-section);
         border: 1px solid var(--border);
         border-radius: 6px;
         padding: 20px;
         text-align: center;
-        transition: border-color 0.2s ease;
+        transition: border-color 0.2s;
       }
-
       .feature-card:hover { border-color: var(--accent); }
-
-      .feature-icon { font-size: 2rem; margin-bottom: 12px; }
-
+      .feature-icon  { font-size: 2rem; margin-bottom: 10px; }
       .feature-title {
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: 700;
         color: var(--accent);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 8px;
       }
+      .feature-desc { font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5; }
 
-      .feature-desc {
-        font-size: 0.78rem;
-        color: var(--text-secondary);
-        line-height: 1.5;
-      }
-
-      /* ===== MODAL ===== */
+      /* ── MODAL ── */
       .modal-backdrop {
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(10, 20, 40, 0.85);
+        background: rgba(10,20,40,0.85);
         z-index: 1000;
         align-items: center;
         justify-content: center;
         padding: 16px;
       }
-
       .modal-backdrop.open { display: flex; }
-
       .modal {
         background: var(--bg-container);
         border: 1px solid var(--accent);
         border-radius: 8px;
-        padding: 28px;
+        padding: 26px;
         width: 100%;
-        max-width: 420px;
+        max-width: 440px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 14px;
       }
-
       .modal-title {
-        font-size: 1rem;
+        font-size: 0.95rem;
         font-weight: 700;
         color: var(--accent);
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
-
       .modal textarea {
         background: var(--bg-section);
         border: 1px solid var(--border);
@@ -555,40 +585,45 @@
         resize: vertical;
         min-height: 100px;
         outline: none;
-        transition: border-color 0.2s ease;
+        transition: border-color 0.2s;
       }
-
       .modal textarea:focus { border-color: var(--accent); }
-
-      .modal-actions {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-      }
-
-      .btn-cancel {
-        background: var(--bg-header);
+      .modal-field { display: flex; flex-direction: column; gap: 6px; }
+      .modal-label {
+        font-size: 0.7rem;
+        font-weight: 700;
         color: var(--text-secondary);
-        border: 1px solid var(--border);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
-
-      .btn-cancel:hover { border-color: var(--accent); color: var(--accent); }
+      .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
     </style>
   </head>
   <body>
 
-    <!-- HEADER -->
     <header>
       <h1>🌟 My Journal</h1>
       <p>Personal tracker · Starting <strong>May 5, 2026</strong></p>
     </header>
 
-    <div class="wrapper">
+    <!-- TOP NAV -->
+    <nav class="top-nav">
+      <div class="top-nav-inner">
+        <button class="nav-tab" data-panel="dates"        onclick="togglePanel('dates')">⭐ Important Dates</button>
+        <button class="nav-tab" data-panel="notes"        onclick="togglePanel('notes')">📝 Notes</button>
+        <button class="nav-tab" data-panel="appointments" onclick="togglePanel('appointments')">📅 Upcoming Appointments</button>
+      </div>
+    </nav>
 
-      <!-- MAIN TWO-COLUMN GRID -->
+    <!-- PANEL DRAWER -->
+    <div class="panel-drawer" id="panelDrawer">
+      <div class="panel-content" id="panelContent"></div>
+    </div>
+
+    <div class="wrapper">
       <div class="main-grid">
 
-        <!-- CALENDAR (left) -->
+        <!-- CALENDAR -->
         <div class="calendar-column">
           <div class="month-selector-row">
             <label for="monthDropdown">Month</label>
@@ -597,10 +632,9 @@
           <div class="calendar-area" id="calendarArea"></div>
         </div>
 
-        <!-- SIDEBAR (right) -->
+        <!-- SIDEBAR -->
         <aside class="sidebar">
 
-          <!-- PROGRESS -->
           <div class="section-card">
             <div class="section-title">📊 Progress</div>
             <div class="stat-grid">
@@ -615,35 +649,30 @@
             </div>
           </div>
 
-          <!-- TRIMESTERS -->
           <div class="section-card">
             <div class="section-title">📅 Trimesters</div>
-            <div class="trimester-card" style="border-left-color: var(--t1-color);">
+            <div class="trimester-card" style="border-left-color:var(--t1-color)">
               <div class="trimester-name">1st Trimester · Weeks 1–13</div>
-              <div class="trimester-desc">May 5 – Aug 3, 2026 · Growth of vital organs, morning sickness, and early development.</div>
+              <div class="trimester-desc">May 5 – Aug 3, 2026 · Vital organ growth and early development.</div>
             </div>
-            <div class="trimester-card" style="border-left-color: var(--t2-color);">
+            <div class="trimester-card" style="border-left-color:var(--t2-color)">
               <div class="trimester-name">2nd Trimester · Weeks 14–26</div>
-              <div class="trimester-desc">Aug 4 – Oct 26, 2026 · Baby becomes active, anatomy scan, energy often returns.</div>
+              <div class="trimester-desc">Aug 4 – Oct 26, 2026 · Baby becomes active, anatomy scan.</div>
             </div>
-            <div class="trimester-card" style="border-left-color: var(--t3-color);">
+            <div class="trimester-card" style="border-left-color:var(--t3-color)">
               <div class="trimester-name">3rd Trimester · Weeks 27–40</div>
-              <div class="trimester-desc">Oct 27, 2026 – Feb 9, 2027 · Rapid growth, birth prep, and the final countdown.</div>
+              <div class="trimester-desc">Oct 27, 2026 – Feb 9, 2027 · Rapid growth and final countdown.</div>
             </div>
           </div>
 
-          <!-- IMPORTANT DATES -->
-          <div class="section-card">
-            <div class="section-title">⭐ Important Dates</div>
-            <div id="importantDates"></div>
-          </div>
-
-          <!-- NOTES -->
           <div class="section-card">
             <div class="section-title">📝 Notes</div>
-            <div class="notes-input-row">
-              <input type="text" id="quickNoteInput" placeholder="Add a note for today…" />
-              <button class="btn btn-sm" onclick="addQuickNote()">Add</button>
+            <div class="notes-input-area">
+              <div class="notes-input-row">
+                <input type="text" id="quickNoteInput" placeholder="Note for today…" />
+                <button class="btn btn-sm" onclick="addQuickNote()">Add</button>
+              </div>
+              <select id="quickNoteTag" class="styled-select"></select>
             </div>
             <div class="notes-list" id="notesList"></div>
           </div>
@@ -651,39 +680,46 @@
         </aside>
       </div>
 
-      <!-- FEATURE CARDS -->
       <div class="feature-section">
         <div class="feature-grid">
           <div class="feature-card">
             <div class="feature-icon">📆</div>
             <div class="feature-title">Weekly Tracking</div>
-            <div class="feature-desc">Every week is numbered from conception. Watch your baby grow week by week through all three trimesters.</div>
+            <div class="feature-desc">Every week numbered from day one. Progress tracked through all three phases.</div>
           </div>
           <div class="feature-card">
             <div class="feature-icon">🌟</div>
             <div class="feature-title">Milestone Dates</div>
-            <div class="feature-desc">Key appointments auto-calculated: ultrasounds, checkups, and your due date all in one place.</div>
+            <div class="feature-desc">Key appointments auto-calculated: scans, checkups, and due date.</div>
           </div>
           <div class="feature-card">
             <div class="feature-icon">🔔</div>
             <div class="feature-title">Smart Reminders</div>
-            <div class="feature-desc">Never miss an important date. All five essential milestones are highlighted in the sidebar.</div>
+            <div class="feature-desc">Never miss an important date. All five essential milestones are highlighted.</div>
           </div>
           <div class="feature-card">
             <div class="feature-icon">✏️</div>
-            <div class="feature-title">Quick Notes</div>
-            <div class="feature-desc">Click any calendar date to attach a personal note. Everything is saved locally in your browser.</div>
+            <div class="feature-title">Tagged Notes</div>
+            <div class="feature-desc">Click any date to add a tagged note. Saved to the cloud automatically.</div>
           </div>
         </div>
       </div>
-
-    </div><!-- /wrapper -->
+    </div>
 
     <!-- MODAL -->
     <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
       <div class="modal">
         <div class="modal-title" id="modalTitle">Add Note</div>
         <textarea id="modalTextarea" placeholder="Write your note here…"></textarea>
+        <div class="modal-field">
+          <label class="modal-label">Tag</label>
+          <select id="modalTagSelect" class="styled-select" onchange="handleTagSelectChange()"></select>
+          <div class="new-tag-row" id="newTagRow">
+            <input type="text" id="newTagInput" placeholder="New tag name…"
+                   onkeydown="if(event.key==='Enter')confirmNewTag()" />
+            <button class="btn btn-sm" onclick="confirmNewTag()">Add</button>
+          </div>
+        </div>
         <div class="modal-actions">
           <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
           <button class="btn" onclick="saveModal()">Save</button>
@@ -692,16 +728,18 @@
     </div>
 
     <script>
-      // ===== CONSTANTS =====
-      const START_DATE   = new Date(2026, 4, 5);  // May 5 2026 (month is 0-indexed)
+      // ── CONSTANTS ──
+      const START_DATE   = new Date(2026, 4, 5);
       const TOTAL_WEEKS  = 40;
       const STORAGE_KEY  = 'pregnancyNotes';
-      const MONTH_NAMES  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const TAGS_KEY     = 'journalTags';
+      const MONTH_NAMES  = ['January','February','March','April','May','June',
+                            'July','August','September','October','November','December'];
       const DAY_ABBREV   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      const DEFAULT_TAGS = ['Gynac', 'Blood Test'];
+      const TAG_COLORS   = ['#ff6b9d','#4ecdc4','#45b7d1','#ffd93d','#c084fc','#fb923c','#a3e635','#f87171'];
 
-      // ===== FIREBASE CONFIG =====
-      // Replace every value below with your project's config from:
-      // Firebase Console → Project Settings → Your apps → SDK setup
+      // ── FIREBASE ──
       const FIREBASE_CONFIG = {
         apiKey:            'AIzaSyB4aVagq_iE3QJt_ZDFrrqGmeD7sTw7RO4',
         authDomain:        'pregnancy-calendar-69dcc.firebaseapp.com',
@@ -711,466 +749,492 @@
         appId:             '1:163852344797:web:c5e3f1e89b088463086a34',
         measurementId:     'G-TR3P2EQHQW',
       };
-
-      // ===== EMAILJS CONFIG =====
-      // Replace with your credentials from emailjs.com:
-      //   Public Key  → Account → API Keys
-      //   Service ID  → Email Services tab
-      //   Template ID → Email Templates tab
-      // Required template variables: {{to_email}}, {{note_date}}, {{note_text}}
       const EMAILJS_CONFIG = {
         publicKey:  'YOUR_PUBLIC_KEY',
         serviceId:  'YOUR_SERVICE_ID',
         templateId: 'YOUR_TEMPLATE_ID',
       };
-
-      const REMINDER_RECIPIENTS = ['ankit.konchady@gmail.com', 'schavan0507@gmail.com'];
-      const REMINDER_SENT_KEY   = 'pregnancyReminderSentDate';
+      const REMINDER_RECIPIENTS  = ['ankit.konchady@gmail.com', 'schavan0507@gmail.com'];
+      const REMINDER_SENT_KEY    = 'pregnancyReminderSentDate';
       const FIRESTORE_COLLECTION = 'pregnancy-notes';
 
-      // ===== SERVICE INIT =====
       firebase.initializeApp(FIREBASE_CONFIG);
       const db = firebase.firestore();
       emailjs.init(EMAILJS_CONFIG.publicKey);
 
-      let notes       = {};   // { 'YYYY-MM-DD': 'text' }
-      let modalDate   = null; // ISO string currently open in modal
+      // ── STATE ──
+      // notes[iso] = { text: string, tag: string }
+      let notes       = {};
+      let tags        = [];
+      let activePanel = null;
+      let modalDate   = null;
 
-      // ===== UTILITY =====
-
+      // ── UTILITY ──
       function dateToISO(d) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${dd}`;
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       }
-
       function isoToDisplay(iso) {
-        const [y, m, d] = iso.split('-');
-        return `${MONTH_NAMES[parseInt(m) - 1]} ${parseInt(d)}, ${y}`;
+        const [y,m,d] = iso.split('-');
+        return `${MONTH_NAMES[+m-1]} ${+d}, ${y}`;
       }
-
-      function addDays(date, n) {
-        const d = new Date(date);
-        d.setDate(d.getDate() + n);
-        return d;
+      function addDays(date, n) { const d=new Date(date); d.setDate(d.getDate()+n); return d; }
+      function escapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
-
-      // Days since May 5 2026 (0 = May 5)
       function daysSinceStart(date) {
-        const d0 = new Date(START_DATE.getFullYear(), START_DATE.getMonth(), START_DATE.getDate());
-        const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        return Math.round((d1 - d0) / 86400000);
+        const d0=new Date(2026,4,5), d1=new Date(date.getFullYear(),date.getMonth(),date.getDate());
+        return Math.round((d1-d0)/86400000);
       }
-
-      // Custom week formula:
-      //   W1 = May 5-10 (days 0-5), W2 starts day 6 (Mon May 11)
-      //   day 0-5 → week 1
-      //   day 6+  → floor((day - 6) / 7) + 2
       function weekNumber(date) {
-        const diff = daysSinceStart(date);
-        if (diff < 0) return null;
-        if (diff < 6) return 1;
-        return Math.floor((diff - 6) / 7) + 2;
+        const diff=daysSinceStart(date);
+        if(diff<0) return null;
+        if(diff<6) return 1;
+        return Math.floor((diff-6)/7)+2;
+      }
+      function trimesterBadgeClass(wk) {
+        return wk<=13?'badge-t1':wk<=26?'badge-t2':'badge-t3';
       }
 
-      function trimesterOf(week) {
-        if (week <= 13) return 1;
-        if (week <= 26) return 2;
-        return 3;
+      // ── TAGS ──
+      function loadTags() {
+        try { tags = JSON.parse(localStorage.getItem(TAGS_KEY)) || [...DEFAULT_TAGS]; }
+        catch { tags = [...DEFAULT_TAGS]; }
+        DEFAULT_TAGS.forEach(t => { if (!tags.includes(t)) tags.unshift(t); });
+      }
+      function saveTags() { localStorage.setItem(TAGS_KEY, JSON.stringify(tags)); }
+      function tagColor(tag) {
+        const i = tags.indexOf(tag);
+        return TAG_COLORS[Math.max(0,i) % TAG_COLORS.length];
+      }
+      function tagPillHtml(tag) {
+        if (!tag) return '';
+        const c = tagColor(tag);
+        return `<span class="tag-pill" style="background:${c}22;color:${c};border-color:${c}66">${escapeHtml(tag)}</span>`;
       }
 
-      function trimesterBadgeClass(week) {
-        const t = trimesterOf(week);
-        return t === 1 ? 'badge-t1' : t === 2 ? 'badge-t2' : 'badge-t3';
+      function populateTagSelect(id, selected) {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">No tag</option>';
+        tags.forEach(t => {
+          const o = document.createElement('option');
+          o.value = t; o.textContent = t;
+          if (t === (selected !== undefined ? selected : cur)) o.selected = true;
+          sel.appendChild(o);
+        });
+        const np = document.createElement('option');
+        np.value = '__new__'; np.textContent = '＋ Add new tag…';
+        sel.appendChild(np);
       }
 
-      // ===== NOTES PERSISTENCE =====
+      function handleTagSelectChange() {
+        const v = document.getElementById('modalTagSelect').value;
+        document.getElementById('newTagRow').classList.toggle('visible', v === '__new__');
+        if (v === '__new__') document.getElementById('newTagInput').focus();
+      }
+
+      function confirmNewTag() {
+        const inp = document.getElementById('newTagInput');
+        const name = inp.value.trim();
+        if (!name) return;
+        if (!tags.includes(name)) { tags.push(name); saveTags(); }
+        inp.value = '';
+        document.getElementById('newTagRow').classList.remove('visible');
+        populateTagSelect('modalTagSelect', name);
+        populateTagSelect('quickNoteTag');
+      }
+
+      // ── NOTES PERSISTENCE ──
+      function migrateNote(v) {
+        if (!v) return { text:'', tag:'' };
+        if (typeof v === 'string') return { text:v, tag:'' };
+        return { text: v.text||'', tag: v.tag||'' };
+      }
+
+      function loadLocalNotes() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+          notes = {};
+          Object.keys(raw).forEach(k => { notes[k] = migrateNote(raw[k]); });
+        } catch { notes = {}; }
+      }
 
       async function loadNotes() {
-        // Seed from localStorage for instant first render
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          notes = raw ? JSON.parse(raw) : {};
-        } catch { notes = {}; }
-
-        // Overwrite with authoritative Firestore data
+        loadLocalNotes();
         try {
           const snap = await db.collection(FIRESTORE_COLLECTION).get();
           notes = {};
-          snap.forEach(doc => { notes[doc.id] = doc.data().text; });
-          saveLocalCache();
-        } catch (e) {
-          console.warn('Firestore load failed, using localStorage cache:', e);
-        }
+          snap.forEach(doc => {
+            const d = doc.data();
+            notes[doc.id] = { text: d.text||'', tag: d.tag||'' };
+          });
+          cacheNotes();
+        } catch(e) { console.warn('Firestore load failed:', e); }
       }
 
-      function saveLocalCache() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-      }
+      function cacheNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 
-      // Keep saveNotes() as alias so existing call-sites still work
-      function saveNotes() { saveLocalCache(); }
-
-      function saveNoteToFirebase(iso, text) {
+      function fbSave(iso, text, tag) {
         db.collection(FIRESTORE_COLLECTION).doc(iso).set({
-          text,
-          date: iso,
+          text, tag: tag||'', date: iso,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }).catch(e => console.warn('Firestore save failed:', e));
       }
 
-      function deleteNoteFromFirebase(iso) {
+      function fbDelete(iso) {
         db.collection(FIRESTORE_COLLECTION).doc(iso).delete()
           .catch(e => console.warn('Firestore delete failed:', e));
       }
 
-      // ===== EMAIL REMINDERS =====
-
-      async function sendReminderEmail(iso, noteText) {
-        const displayDate = isoToDisplay(iso);
-        const sends = REMINDER_RECIPIENTS.map(email =>
-          emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
-            to_email:  email,
-            note_date: displayDate,
-            note_text: noteText,
-          })
-        );
-        try {
-          await Promise.all(sends);
-          console.log('Reminder emails sent for', iso);
-        } catch (e) {
-          console.warn('EmailJS send failed:', e);
-        }
-      }
-
+      // ── EMAIL REMINDERS ──
       async function checkAndSendReminders() {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = new Date(); today.setHours(0,0,0,0);
         const todayISO = dateToISO(today);
-
-        // Only send once per calendar day
         if (localStorage.getItem(REMINDER_SENT_KEY) === todayISO) return;
-
-        const target = new Date(today);
-        target.setDate(today.getDate() + 2);
+        const target = addDays(today, 2);
         const targetISO = dateToISO(target);
-
         if (notes[targetISO]) {
-          await sendReminderEmail(targetISO, notes[targetISO]);
-          localStorage.setItem(REMINDER_SENT_KEY, todayISO);
+          const sends = REMINDER_RECIPIENTS.map(email =>
+            emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
+              to_email: email, note_date: isoToDisplay(targetISO), note_text: notes[targetISO].text,
+            })
+          );
+          try { await Promise.all(sends); localStorage.setItem(REMINDER_SENT_KEY, todayISO); }
+          catch(e) { console.warn('EmailJS failed:', e); }
         }
       }
 
-      // ===== CALENDAR RENDERING =====
-
-      function getMonthsToRender() {
-        // May 2026 (index 4) to February 2027 (index 1)
-        const months = [];
-        for (let i = 0; i < 10; i++) {
-          const year  = i < 8 ? 2026 : 2027;
-          const month = (4 + i) % 12;  // 4=May … 11=Dec then 0=Jan, 1=Feb
-          months.push({ year, month });
+      // ── TOP NAV PANELS ──
+      function togglePanel(panelId) {
+        const drawer = document.getElementById('panelDrawer');
+        if (activePanel === panelId) {
+          activePanel = null;
+          drawer.classList.remove('open');
+          document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+          return;
         }
-        return months;
+        activePanel = panelId;
+        document.querySelectorAll('.nav-tab').forEach(t =>
+          t.classList.toggle('active', t.dataset.panel === panelId)
+        );
+        drawer.classList.add('open');
+        renderPanel(panelId);
       }
 
-      // Index into getMonthsToRender() for the currently displayed month
-      let selectedMonthIdx = (function () {
-        const allMonths = getMonthsToRender();
+      function renderPanel(id) {
+        const c = document.getElementById('panelContent');
+        if (id === 'dates')        renderDatesPanel(c);
+        else if (id === 'notes')   renderNotesPanel(c);
+        else if (id === 'appointments') renderApptsPanel(c);
+      }
+
+      function renderDatesPanel(c) {
+        const milestones = [
+          { icon:'🎯', label:'Due Date',          day:280 },
+          { icon:'🔬', label:'1st Ultrasound',    day:56  },
+          { icon:'📸', label:'2nd Anatomy Scan',  day:119 },
+          { icon:'💉', label:'3rd Checkup',       day:182 },
+          { icon:'🏥', label:'Final Ultrasound',  day:259 },
+        ];
+        const today = new Date(); today.setHours(0,0,0,0);
+        const html = milestones.map(m => {
+          const date = addDays(START_DATE, m.day);
+          const dStr = `${MONTH_NAMES[date.getMonth()].slice(0,3)} ${date.getDate()}, ${date.getFullYear()}`;
+          const diff = Math.round((date-today)/86400000);
+          const cd   = diff===0?'Today!':diff<0?`${Math.abs(diff)} days ago`:`in ${diff} days`;
+          return `<div class="dates-item${diff<0?' past':''}">
+            <span class="dates-item-icon">${m.icon}</span>
+            <div>
+              <div class="dates-item-label">${m.label}</div>
+              <div class="dates-item-date">${dStr}</div>
+              <div class="dates-item-cd">${cd}</div>
+            </div>
+          </div>`;
+        }).join('');
+        c.innerHTML = `<div class="panel-section-title">⭐ Important Dates</div>
+          <div class="dates-grid">${html}</div>`;
+      }
+
+      function renderNotesPanel(c, filterTag) {
+        filterTag = filterTag || '';
+        const entries = Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0]));
+        const allTags = [...new Set(entries.map(([,n]) => n.tag).filter(Boolean))];
+
+        const filterBtns = [
+          `<button class="filter-btn${!filterTag?' active':''}" onclick="renderNotesPanel(document.getElementById('panelContent'),'')">All</button>`,
+          ...allTags.map(t =>
+            `<button class="filter-btn${t===filterTag?' active':''}" onclick="renderNotesPanel(document.getElementById('panelContent'),${JSON.stringify(t)})">${escapeHtml(t)}</button>`
+          )
+        ].join('');
+
+        const shown = filterTag ? entries.filter(([,n]) => n.tag===filterTag) : entries;
+        const items = shown.length===0
+          ? '<div class="panel-empty">No notes found.</div>'
+          : `<div class="notes-panel-grid">${shown.map(([iso,n]) => {
+              const bc = n.tag ? tagColor(n.tag) : 'var(--border)';
+              return `<div class="notes-panel-item" style="border-left-color:${bc}">
+                <div class="notes-panel-row">
+                  <span class="notes-panel-date">${isoToDisplay(iso)}</span>
+                  ${tagPillHtml(n.tag)}
+                  <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
+                </div>
+                <div class="notes-panel-text">${escapeHtml(n.text)}</div>
+              </div>`;
+            }).join('')}</div>`;
+
+        c.innerHTML = `<div class="panel-header">
+            <div class="panel-section-title">📝 All Notes</div>
+            <div class="filter-bar">${filterBtns}</div>
+          </div>${items}`;
+      }
+
+      function renderApptsPanel(c) {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const todayISO = dateToISO(today);
+        const upcoming = Object.entries(notes)
+          .filter(([iso]) => iso >= todayISO)
+          .sort((a,b) => a[0].localeCompare(b[0]));
+
+        const items = upcoming.length===0
+          ? '<div class="panel-empty">No upcoming appointments.</div>'
+          : `<div class="appts-list">${upcoming.map(([iso,n]) => {
+              const diff = Math.round((new Date(iso+'T00:00:00')-today)/86400000);
+              const cd   = diff===0?'Today':`in ${diff} day${diff!==1?'s':''}`;
+              return `<div class="appt-item">
+                <div class="appt-left">
+                  <div class="appt-date">${isoToDisplay(iso)}</div>
+                  <div class="appt-cd">${cd}</div>
+                </div>
+                <div class="appt-right">
+                  ${tagPillHtml(n.tag)}
+                  <div class="appt-text">${escapeHtml(n.text)}</div>
+                </div>
+              </div>`;
+            }).join('')}</div>`;
+
+        c.innerHTML = `<div class="panel-section-title">📅 Upcoming Appointments</div>${items}`;
+      }
+
+      // ── CALENDAR ──
+      function getMonths() {
+        const m = [];
+        for (let i=0; i<10; i++) {
+          m.push({ year: i<8?2026:2027, month: (4+i)%12 });
+        }
+        return m;
+      }
+
+      let selectedMonthIdx = (() => {
         const now = new Date();
-        const idx = allMonths.findIndex(m => m.year === now.getFullYear() && m.month === now.getMonth());
-        return idx !== -1 ? idx : 0;
+        const i = getMonths().findIndex(m => m.year===now.getFullYear() && m.month===now.getMonth());
+        return i !== -1 ? i : 0;
       })();
 
       function buildMonthDropdown() {
         const sel = document.getElementById('monthDropdown');
         sel.innerHTML = '';
-        getMonthsToRender().forEach(({ year, month }, i) => {
-          const opt = document.createElement('option');
-          opt.value = i;
-          opt.textContent = `${MONTH_NAMES[month]} ${year}`;
-          if (i === selectedMonthIdx) opt.selected = true;
-          sel.appendChild(opt);
+        getMonths().forEach(({year,month},i) => {
+          const o = document.createElement('option');
+          o.value = i; o.textContent = `${MONTH_NAMES[month]} ${year}`;
+          if (i===selectedMonthIdx) o.selected=true;
+          sel.appendChild(o);
         });
       }
 
       function onMonthChange() {
-        selectedMonthIdx = parseInt(document.getElementById('monthDropdown').value, 10);
+        selectedMonthIdx = +document.getElementById('monthDropdown').value;
         renderCalendar();
       }
 
-      // Returns the Monday on or before the given date
       function startOfWeekMon(date) {
-        const d = new Date(date);
-        const day = d.getDay(); // 0=Sun, 1=Mon...
-        const diff = day === 0 ? -6 : 1 - day;
-        d.setDate(d.getDate() + diff);
+        const d=new Date(date), day=d.getDay();
+        d.setDate(d.getDate()+(day===0?-6:1-day));
         return d;
       }
 
       function renderCalendar() {
-        const area   = document.getElementById('calendarArea');
+        const area = document.getElementById('calendarArea');
         area.innerHTML = '';
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = new Date(); today.setHours(0,0,0,0);
+        const {year,month} = getMonths()[selectedMonthIdx];
 
-        const monthsAll = getMonthsToRender();
-        [monthsAll[selectedMonthIdx]].forEach(({ year, month }) => {
-          const card = document.createElement('div');
-          card.className = 'month-card';
+        const card = document.createElement('div');
+        card.className = 'month-card';
 
-          // Title
-          const title = document.createElement('div');
-          title.className = 'month-title';
-          title.textContent = `${MONTH_NAMES[month].toUpperCase()} ${year}`;
-          card.appendChild(title);
+        const title = document.createElement('div');
+        title.className = 'month-title';
+        title.textContent = `${MONTH_NAMES[month].toUpperCase()} ${year}`;
+        card.appendChild(title);
 
-          // Grid
-          const grid = document.createElement('div');
-          grid.className = 'cal-grid';
+        const grid = document.createElement('div');
+        grid.className = 'cal-grid';
 
-          // Header row
-          const wkHeader = document.createElement('div');
-          wkHeader.className = 'cal-header-cell week-num-header';
-          wkHeader.textContent = 'WK';
-          grid.appendChild(wkHeader);
+        const wkH = document.createElement('div');
+        wkH.className='cal-header-cell week-num-header'; wkH.textContent='WK';
+        grid.appendChild(wkH);
+        DAY_ABBREV.forEach(d => {
+          const c=document.createElement('div'); c.className='cal-header-cell'; c.textContent=d; grid.appendChild(c);
+        });
 
-          DAY_ABBREV.forEach(d => {
-            const cell = document.createElement('div');
-            cell.className = 'cal-header-cell';
-            cell.textContent = d;
-            grid.appendChild(cell);
-          });
+        const first=new Date(year,month,1), last=new Date(year,month+1,0);
+        let cursor=startOfWeekMon(first);
 
-          // First day of month & first Monday on/before it
-          const firstOfMonth = new Date(year, month, 1);
-          const lastOfMonth  = new Date(year, month + 1, 0);
-          let cursor = startOfWeekMon(firstOfMonth);
+        while (cursor <= last) {
+          const wk=weekNumber(cursor);
+          const wkCell=document.createElement('div');
+          wkCell.className='week-num-cell'; wkCell.textContent=wk!==null?`W${wk}`:'';
+          grid.appendChild(wkCell);
 
-          // Week rows
-          while (cursor <= lastOfMonth) {
-            // Week number cell — use the Monday's pregnancy week (or the first day in pregnancy if week 1)
-            const weekNum = weekNumber(cursor);
-            const wkCell  = document.createElement('div');
-            wkCell.className = 'week-num-cell';
-            wkCell.textContent = weekNum !== null ? `W${weekNum}` : '';
-            grid.appendChild(wkCell);
+          for (let d=0; d<7; d++) {
+            const cd=new Date(cursor); cd.setDate(cursor.getDate()+d);
+            const cell=document.createElement('div'); cell.className='day-cell';
+            if (cd.getMonth()!==month) cell.classList.add('other-month');
+            if (cd.getTime()===today.getTime()) cell.classList.add('today');
 
-            // 7 day cells
-            for (let d = 0; d < 7; d++) {
-              const cellDate = new Date(cursor);
-              cellDate.setDate(cursor.getDate() + d);
+            const num=document.createElement('div'); num.className='day-number';
+            num.textContent=cd.getDate(); cell.appendChild(num);
 
-              const cell  = document.createElement('div');
-              cell.className = 'day-cell';
-
-              const isOtherMonth = cellDate.getMonth() !== month;
-              if (isOtherMonth) cell.classList.add('other-month');
-
-              const isToday = cellDate.getTime() === today.getTime();
-              if (isToday) cell.classList.add('today');
-
-              // Day number
-              const numEl = document.createElement('div');
-              numEl.className = 'day-number';
-              numEl.textContent = cellDate.getDate();
-              cell.appendChild(numEl);
-
-              // Trimester badge
-              const wk = weekNumber(cellDate);
-              if (wk !== null && wk >= 1 && wk <= TOTAL_WEEKS) {
-                const badge = document.createElement('div');
-                badge.className = `trimester-badge ${trimesterBadgeClass(wk)}`;
-                badge.textContent = `W${wk}`;
-                cell.appendChild(badge);
-              }
-
-              // Note indicator
-              const iso = dateToISO(cellDate);
-              if (notes[iso]) {
-                const ind = document.createElement('div');
-                ind.className = 'note-indicator';
-                ind.textContent = '📝';
-                cell.appendChild(ind);
-              }
-
-              // Click handler
-              cell.addEventListener('click', () => openModal(iso));
-              grid.appendChild(cell);
+            const w=weekNumber(cd);
+            if (w!==null && w>=1 && w<=TOTAL_WEEKS) {
+              const b=document.createElement('div');
+              b.className=`trimester-badge ${trimesterBadgeClass(w)}`; b.textContent=`W${w}`;
+              cell.appendChild(b);
             }
 
-            cursor.setDate(cursor.getDate() + 7);
+            const iso=dateToISO(cd);
+            if (notes[iso]) {
+              const ind=document.createElement('div'); ind.className='note-indicator'; ind.textContent='📝';
+              cell.appendChild(ind);
+            }
+
+            cell.addEventListener('click', () => openModal(iso));
+            grid.appendChild(cell);
           }
-
-          card.appendChild(grid);
-          area.appendChild(card);
-        });
-      }
-
-      // ===== PROGRESS STATS =====
-
-      function updateProgress() {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const wk = weekNumber(today);
-        let currentWk   = '—';
-        let remaining   = '—';
-
-        if (wk !== null && wk >= 1) {
-          currentWk = Math.min(wk, TOTAL_WEEKS);
-          remaining = Math.max(0, TOTAL_WEEKS - currentWk);
+          cursor.setDate(cursor.getDate()+7);
         }
 
-        document.getElementById('currentWeek').textContent   = currentWk;
-        document.getElementById('weeksRemaining').textContent = remaining;
+        card.appendChild(grid);
+        area.appendChild(card);
       }
 
-      // ===== IMPORTANT DATES =====
-
-      function renderImportantDates() {
-        const milestones = [
-          { icon: '🎯', label: 'Due Date',          day: 280 },
-          { icon: '🔬', label: '1st Ultrasound',    day: 56  },
-          { icon: '📸', label: '2nd Anatomy Scan',  day: 119 },
-          { icon: '💉', label: '3rd Checkup',       day: 182 },
-          { icon: '🏥', label: 'Final Ultrasound',  day: 259 },
-        ];
-
-        const container = document.getElementById('importantDates');
-        container.innerHTML = '';
-
-        milestones.forEach(m => {
-          const date  = addDays(START_DATE, m.day);
-          const label = `${MONTH_NAMES[date.getMonth()].slice(0,3)} ${date.getDate()}, ${date.getFullYear()}`;
-
-          const item = document.createElement('div');
-          item.className = 'date-item';
-          item.innerHTML = `
-            <span class="date-icon">${m.icon}</span>
-            <span class="date-label">${m.label}</span>
-            <span class="date-value">${label}</span>
-          `;
-          container.appendChild(item);
-        });
+      // ── PROGRESS ──
+      function updateProgress() {
+        const today=new Date(); today.setHours(0,0,0,0);
+        const wk=weekNumber(today);
+        const cur = wk!==null&&wk>=1 ? Math.min(wk,TOTAL_WEEKS) : '—';
+        const rem = wk!==null&&wk>=1 ? Math.max(0,TOTAL_WEEKS-Math.min(wk,TOTAL_WEEKS)) : '—';
+        document.getElementById('currentWeek').textContent    = cur;
+        document.getElementById('weeksRemaining').textContent = rem;
       }
 
-      // ===== NOTES SIDEBAR =====
-
+      // ── SIDEBAR NOTES LIST ──
       function renderNotesList() {
         const list = document.getElementById('notesList');
         list.innerHTML = '';
-
-        const entries = Object.entries(notes).sort((a, b) => a[0].localeCompare(b[0]));
-
-        if (entries.length === 0) {
+        const entries = Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0]));
+        if (entries.length===0) {
           list.innerHTML = '<div class="notes-empty">No notes yet. Click a date to add one.</div>';
           return;
         }
-
-        entries.forEach(([iso, text]) => {
+        entries.forEach(([iso,n]) => {
+          const color = n.tag ? tagColor(n.tag) : 'var(--border)';
           const item = document.createElement('div');
-          item.className = 'note-item';
-          item.innerHTML = `
+          item.className='note-item'; item.style.borderLeftColor=color;
+          item.innerHTML=`
             <div class="note-item-header">
               <span class="note-date">${isoToDisplay(iso)}</span>
+              ${tagPillHtml(n.tag)}
               <button class="btn btn-sm btn-delete" onclick="deleteNote('${iso}')">✕</button>
             </div>
-            <div class="note-text">${escapeHtml(text)}</div>
-          `;
+            <div class="note-text">${escapeHtml(n.text)}</div>`;
           list.appendChild(item);
         });
       }
 
-      function escapeHtml(str) {
-        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      function refreshAll() {
+        renderNotesList();
+        renderCalendar();
+        if (activePanel) renderPanel(activePanel);
       }
 
       function deleteNote(iso) {
         delete notes[iso];
-        deleteNoteFromFirebase(iso);
-        saveNotes();
-        renderNotesList();
-        renderCalendar();
+        fbDelete(iso);
+        cacheNotes();
+        refreshAll();
       }
 
       function addQuickNote() {
-        const input = document.getElementById('quickNoteInput');
-        const text  = input.value.trim();
+        const inp=document.getElementById('quickNoteInput');
+        const text=inp.value.trim();
         if (!text) return;
-
-        const today = dateToISO(new Date());
-        notes[today] = text;
-        saveNoteToFirebase(today, text);
-        saveNotes();
-        input.value = '';
-        renderNotesList();
-        renderCalendar();
+        const tag=document.getElementById('quickNoteTag').value;
+        const iso=dateToISO(new Date());
+        notes[iso]={text,tag};
+        fbSave(iso,text,tag);
+        cacheNotes();
+        inp.value='';
+        refreshAll();
       }
-
-      // Allow Enter key to submit quick note
       document.getElementById('quickNoteInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter') addQuickNote();
+        if (e.key==='Enter') addQuickNote();
       });
 
-      // ===== MODAL =====
-
+      // ── MODAL ──
       function openModal(iso) {
-        modalDate = iso;
-        document.getElementById('modalTitle').textContent = `Add Note for ${isoToDisplay(iso)}`;
-        document.getElementById('modalTextarea').value    = notes[iso] || '';
+        modalDate=iso;
+        document.getElementById('modalTitle').textContent=`Add Note for ${isoToDisplay(iso)}`;
+        const n=notes[iso];
+        document.getElementById('modalTextarea').value = n ? n.text : '';
+        populateTagSelect('modalTagSelect', n ? n.tag : '');
+        document.getElementById('newTagRow').classList.remove('visible');
         document.getElementById('modalBackdrop').classList.add('open');
         document.getElementById('modalTextarea').focus();
       }
 
       function closeModal() {
         document.getElementById('modalBackdrop').classList.remove('open');
-        modalDate = null;
+        modalDate=null;
       }
 
       function saveModal() {
-        const text = document.getElementById('modalTextarea').value.trim();
+        const text=document.getElementById('modalTextarea').value.trim();
+        const tagVal=document.getElementById('modalTagSelect').value;
+        const tag=tagVal==='__new__' ? '' : tagVal;
         if (modalDate) {
           if (text) {
-            notes[modalDate] = text;
-            saveNoteToFirebase(modalDate, text);
+            notes[modalDate]={text,tag};
+            fbSave(modalDate,text,tag);
           } else {
             delete notes[modalDate];
-            deleteNoteFromFirebase(modalDate);
+            fbDelete(modalDate);
           }
-          saveNotes();
-          renderNotesList();
-          renderCalendar();
+          cacheNotes();
+          refreshAll();
         }
         closeModal();
       }
 
       function handleBackdropClick(e) {
-        if (e.target === document.getElementById('modalBackdrop')) closeModal();
+        if (e.target===document.getElementById('modalBackdrop')) closeModal();
       }
 
-      // Close modal on Escape
-      document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') closeModal();
-      });
+      document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
 
-      // ===== INIT =====
-
+      // ── INIT ──
       async function init() {
-        // Render immediately with any cached data
+        loadTags();
+        loadLocalNotes();
         updateProgress();
-        renderImportantDates();
         buildMonthDropdown();
+        populateTagSelect('quickNoteTag');
         renderCalendar();
         renderNotesList();
 
-        // Load from Firestore, then re-render with live data
         await loadNotes();
         renderNotesList();
         renderCalendar();
-
-        // Check for upcoming notes and send email reminders
         await checkAndSendReminders();
       }
 
