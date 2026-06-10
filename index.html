@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pregnancy Calendar</title>
+
+    <!-- Firebase (compat SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <!-- EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
     <style>
       /* ===== RESET & BASE ===== */
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -691,6 +699,39 @@
       const MONTH_NAMES  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
       const DAY_ABBREV   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
+      // ===== FIREBASE CONFIG =====
+      // Replace every value below with your project's config from:
+      // Firebase Console → Project Settings → Your apps → SDK setup
+      const FIREBASE_CONFIG = {
+        apiKey:            'YOUR_API_KEY',
+        authDomain:        'YOUR_PROJECT_ID.firebaseapp.com',
+        projectId:         'YOUR_PROJECT_ID',
+        storageBucket:     'YOUR_PROJECT_ID.appspot.com',
+        messagingSenderId: 'YOUR_SENDER_ID',
+        appId:             'YOUR_APP_ID',
+      };
+
+      // ===== EMAILJS CONFIG =====
+      // Replace with your credentials from emailjs.com:
+      //   Public Key  → Account → API Keys
+      //   Service ID  → Email Services tab
+      //   Template ID → Email Templates tab
+      // Required template variables: {{to_email}}, {{note_date}}, {{note_text}}
+      const EMAILJS_CONFIG = {
+        publicKey:  'YOUR_PUBLIC_KEY',
+        serviceId:  'YOUR_SERVICE_ID',
+        templateId: 'YOUR_TEMPLATE_ID',
+      };
+
+      const REMINDER_RECIPIENTS = ['ankit.konchady@gmail.com', 'schavan0507@gmail.com'];
+      const REMINDER_SENT_KEY   = 'pregnancyReminderSentDate';
+      const FIRESTORE_COLLECTION = 'pregnancy-notes';
+
+      // ===== SERVICE INIT =====
+      firebase.initializeApp(FIREBASE_CONFIG);
+      const db = firebase.firestore();
+      emailjs.init(EMAILJS_CONFIG.publicKey);
+
       let notes       = {};   // { 'YYYY-MM-DD': 'text' }
       let modalDate   = null; // ISO string currently open in modal
 
@@ -745,15 +786,79 @@
 
       // ===== NOTES PERSISTENCE =====
 
-      function loadNotes() {
+      async function loadNotes() {
+        // Seed from localStorage for instant first render
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           notes = raw ? JSON.parse(raw) : {};
         } catch { notes = {}; }
+
+        // Overwrite with authoritative Firestore data
+        try {
+          const snap = await db.collection(FIRESTORE_COLLECTION).get();
+          notes = {};
+          snap.forEach(doc => { notes[doc.id] = doc.data().text; });
+          saveLocalCache();
+        } catch (e) {
+          console.warn('Firestore load failed, using localStorage cache:', e);
+        }
       }
 
-      function saveNotes() {
+      function saveLocalCache() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      }
+
+      // Keep saveNotes() as alias so existing call-sites still work
+      function saveNotes() { saveLocalCache(); }
+
+      function saveNoteToFirebase(iso, text) {
+        db.collection(FIRESTORE_COLLECTION).doc(iso).set({
+          text,
+          date: iso,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(e => console.warn('Firestore save failed:', e));
+      }
+
+      function deleteNoteFromFirebase(iso) {
+        db.collection(FIRESTORE_COLLECTION).doc(iso).delete()
+          .catch(e => console.warn('Firestore delete failed:', e));
+      }
+
+      // ===== EMAIL REMINDERS =====
+
+      async function sendReminderEmail(iso, noteText) {
+        const displayDate = isoToDisplay(iso);
+        const sends = REMINDER_RECIPIENTS.map(email =>
+          emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
+            to_email:  email,
+            note_date: displayDate,
+            note_text: noteText,
+          })
+        );
+        try {
+          await Promise.all(sends);
+          console.log('Reminder emails sent for', iso);
+        } catch (e) {
+          console.warn('EmailJS send failed:', e);
+        }
+      }
+
+      async function checkAndSendReminders() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayISO = dateToISO(today);
+
+        // Only send once per calendar day
+        if (localStorage.getItem(REMINDER_SENT_KEY) === todayISO) return;
+
+        const target = new Date(today);
+        target.setDate(today.getDate() + 2);
+        const targetISO = dateToISO(target);
+
+        if (notes[targetISO]) {
+          await sendReminderEmail(targetISO, notes[targetISO]);
+          localStorage.setItem(REMINDER_SENT_KEY, todayISO);
+        }
       }
 
       // ===== CALENDAR RENDERING =====
@@ -983,9 +1088,10 @@
 
       function deleteNote(iso) {
         delete notes[iso];
+        deleteNoteFromFirebase(iso);
         saveNotes();
         renderNotesList();
-        renderCalendar(); // refresh indicators
+        renderCalendar();
       }
 
       function addQuickNote() {
@@ -995,6 +1101,7 @@
 
         const today = dateToISO(new Date());
         notes[today] = text;
+        saveNoteToFirebase(today, text);
         saveNotes();
         input.value = '';
         renderNotesList();
@@ -1026,8 +1133,10 @@
         if (modalDate) {
           if (text) {
             notes[modalDate] = text;
+            saveNoteToFirebase(modalDate, text);
           } else {
-            delete notes[modalDate]; // empty text = delete note
+            delete notes[modalDate];
+            deleteNoteFromFirebase(modalDate);
           }
           saveNotes();
           renderNotesList();
@@ -1047,12 +1156,24 @@
 
       // ===== INIT =====
 
-      loadNotes();
-      updateProgress();
-      renderImportantDates();
-      renderNotesList();
-      buildMonthDropdown();
-      renderCalendar();
+      async function init() {
+        // Render immediately with any cached data
+        updateProgress();
+        renderImportantDates();
+        buildMonthDropdown();
+        renderCalendar();
+        renderNotesList();
+
+        // Load from Firestore, then re-render with live data
+        await loadNotes();
+        renderNotesList();
+        renderCalendar();
+
+        // Check for upcoming notes and send email reminders
+        await checkAndSendReminders();
+      }
+
+      init();
     </script>
   </body>
 </html>
