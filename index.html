@@ -2415,14 +2415,23 @@
         });
       }
 
+      function refreshPageContent() {
+        if (currentPage === 'home') return;
+        const c = document.getElementById('pageContent');
+        if (!c) return;
+        if (currentPage === 'meds')         renderMedsPage(c);
+        else if (currentPage === 'dates')   renderDatesPage(c);
+        else if (currentPage === 'notes')   renderNotesPage(c);
+        else if (currentPage === 'appointments') renderApptsPage(c);
+        else if (currentPage === 'tags')    renderTagsPage(c);
+        else if (currentPage === 'history') renderHistoryPage(c);
+      }
+
       function refreshAll() {
         recomputeTagCounts();
         renderNotesList();
         renderCalendar();
-        if (currentPage !== 'home') {
-          const c = document.getElementById('pageContent');
-          if (c) navigateTo(currentPage);
-        }
+        refreshPageContent();
       }
 
       function deleteNote(iso) {
@@ -2491,7 +2500,7 @@
         };
 
         c.innerHTML = `
-          <div class="panel-section-title">📋 History</div>
+          <div class="page-section-title"><svg class="icon"><use href="#i-list"/></svg> History</div>
           <div class="history-filters">
             <div class="history-filter-group" style="flex:2;min-width:180px">
               <label class="history-filter-label">Search</label>
@@ -2563,7 +2572,7 @@
         </div>`;
 
         if (!entries.length) {
-          resultsEl.innerHTML = summary + '<div class="panel-empty">No notes match the filters.</div>';
+          resultsEl.innerHTML = summary + '<div class="page-empty">No notes match the filters.</div>';
           return;
         }
 
@@ -2590,8 +2599,9 @@
       function renderTagsPanel(c) {
         const addBtn = `<button class="btn btn-sm" onclick="openTagEditor(null)">＋ Add Tag</button>`;
         if (!tags.length) {
-          c.innerHTML = `<div class="panel-header"><div class="panel-section-title">🏷️ Tags</div>${addBtn}</div>
-            <div class="panel-empty">No tags yet.</div>`;
+          c.innerHTML = `<div class="page-toolbar">
+              <div class="page-section-title"><svg class="icon"><use href="#i-tag"/></svg> Tags</div>${addBtn}
+            </div><div class="page-empty">No tags yet.</div>`;
           return;
         }
         const items = tags.map(t => {
@@ -2609,8 +2619,8 @@
             ${delBtn}
           </div>`;
         }).join('');
-        c.innerHTML = `<div class="panel-header">
-          <div class="panel-section-title">🏷️ Tags</div>${addBtn}
+        c.innerHTML = `<div class="page-toolbar">
+          <div class="page-section-title"><svg class="icon"><use href="#i-tag"/></svg> Tags</div>${addBtn}
         </div><div class="tags-panel-grid">${items}</div>`;
       }
 
