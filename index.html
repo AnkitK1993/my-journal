@@ -216,6 +216,29 @@
       .appt-right { flex: 1; display: flex; align-items: center; gap: 10px; }
       .appt-text  { font-size: 0.8rem; color: var(--text-secondary); flex: 1; }
 
+      /* ── TAGS MANAGEMENT PANEL ── */
+      .tags-panel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 10px;
+      }
+      .tag-manage-item {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-left: 3px solid;
+        border-radius: 0 6px 6px 0;
+        padding: 11px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: border-color 0.2s;
+      }
+      .tag-manage-item:hover { border-color: var(--accent); }
+      .tag-color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+      .tag-manage-name { flex: 1; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+      .tag-manage-count { font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap; }
+      .btn-sure { background: rgba(255,107,107,0.15); border-color: var(--delete-color) !important; color: var(--delete-color) !important; font-weight: 700; }
+
       /* ── TAG PILL ── */
       .tag-pill {
         display: inline-block;
@@ -1004,6 +1027,7 @@
         <button class="nav-tab" data-panel="dates"        onclick="togglePanel('dates')">⭐ Important Dates</button>
         <button class="nav-tab" data-panel="notes"        onclick="togglePanel('notes')">📝 Notes</button>
         <button class="nav-tab" data-panel="appointments" onclick="togglePanel('appointments')">📅 Upcoming Appointments</button>
+        <button class="nav-tab" data-panel="tags"         onclick="togglePanel('tags')">🏷️ Tags</button>
       </div>
     </nav>
 
@@ -1088,6 +1112,25 @@
         <div class="modal-actions">
           <button class="btn btn-cancel" onclick="closeMilestoneEdit()">Cancel</button>
           <button class="btn" onclick="saveMilestoneDate()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAG EDITOR MODAL -->
+    <div class="modal-backdrop" id="tagEditorBackdrop" onclick="handleTagEditorBackdropClick(event)">
+      <div class="modal" style="max-width:360px">
+        <div class="modal-title" id="tagEditorTitle">Add Tag</div>
+        <div class="modal-field">
+          <label class="modal-label">Tag Name</label>
+          <input type="text" id="tagNameInput" placeholder="e.g. Scan, Medication…"
+                 style="background:var(--bg-section);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);padding:9px 12px;font-size:0.88rem;font-family:inherit;outline:none;width:100%;transition:border-color 0.2s"
+                 onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+                 onkeydown="if(event.key==='Enter')saveTagEdit()" />
+        </div>
+        <div id="tagEditorError" style="font-size:0.75rem;color:#ff6b6b;display:none"></div>
+        <div class="modal-actions">
+          <button class="btn btn-cancel" onclick="closeTagEditor()">Cancel</button>
+          <button class="btn" onclick="saveTagEdit()">Save</button>
         </div>
       </div>
     </div>
@@ -1216,6 +1259,9 @@
       let detailIso               = null;
       let milestoneDates          = {};
       let editingMilestone        = null;
+      let editingTag              = null;  // null = add new, string = rename existing
+      let tagDeletePending        = null;
+      let tagDeleteTimer          = null;
 
       // ── UTILITY ──
       function dateToISO(d) {
@@ -1400,9 +1446,10 @@
 
       function renderPanel(id) {
         const c = document.getElementById('panelContent');
-        if (id === 'dates')        renderDatesPanel(c);
-        else if (id === 'notes')   renderNotesPanel(c);
+        if (id === 'dates')             renderDatesPanel(c);
+        else if (id === 'notes')        renderNotesPanel(c);
         else if (id === 'appointments') renderApptsPanel(c);
+        else if (id === 'tags')         renderTagsPanel(c);
       }
 
       function renderDatesPanel(c) {
@@ -1781,6 +1828,115 @@
       }
 
 
+      // ── TAG MANAGEMENT ──
+      function renderTagsPanel(c) {
+        const addBtn = `<button class="btn btn-sm" onclick="openTagEditor(null)">＋ Add Tag</button>`;
+        if (!tags.length) {
+          c.innerHTML = `<div class="panel-header"><div class="panel-section-title">🏷️ Tags</div>${addBtn}</div>
+            <div class="panel-empty">No tags yet.</div>`;
+          return;
+        }
+        const items = tags.map(t => {
+          const color     = tagColor(t);
+          const count     = tagCounts[t] || 0;
+          const isPending = tagDeletePending === t;
+          const delBtn    = isPending
+            ? `<button class="btn-icon btn-del btn-sure" onclick="executeDeleteTag(${JSON.stringify(t)})">Sure?</button>`
+            : `<button class="btn-icon btn-del" onclick="promptDeleteTag(${JSON.stringify(t)})">🗑️</button>`;
+          return `<div class="tag-manage-item" style="border-left-color:${color}">
+            <span class="tag-color-dot" style="background:${color}"></span>
+            <span class="tag-manage-name">${escapeHtml(t)}</span>
+            <span class="tag-manage-count">${count ? `${count} use${count!==1?'s':''}` : 'Unused'}</span>
+            <button class="btn-icon" onclick="openTagEditor(${JSON.stringify(t)})">✏️</button>
+            ${delBtn}
+          </div>`;
+        }).join('');
+        c.innerHTML = `<div class="panel-header">
+          <div class="panel-section-title">🏷️ Tags</div>${addBtn}
+        </div><div class="tags-panel-grid">${items}</div>`;
+      }
+
+      function openTagEditor(tag) {
+        editingTag = tag;
+        document.getElementById('tagEditorTitle').textContent = tag ? 'Rename Tag' : 'Add Tag';
+        document.getElementById('tagNameInput').value         = tag || '';
+        document.getElementById('tagEditorError').style.display = 'none';
+        document.getElementById('tagEditorBackdrop').classList.add('open');
+        const inp = document.getElementById('tagNameInput');
+        inp.focus(); if (tag) inp.select();
+      }
+
+      function closeTagEditor() {
+        document.getElementById('tagEditorBackdrop').classList.remove('open');
+        editingTag = null;
+      }
+
+      function handleTagEditorBackdropClick(e) {
+        if (e.target === document.getElementById('tagEditorBackdrop')) closeTagEditor();
+      }
+
+      function saveTagEdit() {
+        const newName = document.getElementById('tagNameInput').value.trim();
+        const errEl   = document.getElementById('tagEditorError');
+        if (!newName) { errEl.textContent='Name cannot be empty.'; errEl.style.display='block'; return; }
+
+        if (editingTag === null) {
+          // Add new
+          if (tags.includes(newName)) { errEl.textContent='Tag already exists.'; errEl.style.display='block'; return; }
+          tags.push(newName);
+          saveTags();
+        } else if (newName !== editingTag) {
+          // Rename
+          if (tags.includes(newName)) { errEl.textContent='A tag with that name already exists.'; errEl.style.display='block'; return; }
+          const idx = tags.indexOf(editingTag);
+          if (idx > -1) tags[idx] = newName;
+          saveTags();
+          // Update all notes using the old tag name
+          Object.keys(notes).forEach(iso => {
+            if (notes[iso].tag === editingTag) {
+              notes[iso] = { ...notes[iso], tag: newName };
+              fbSave(iso, notes[iso].text, newName, notes[iso].cost, notes[iso].attachments);
+            }
+          });
+          cacheNotes();
+        }
+        closeTagEditor();
+        recomputeTagCounts();
+        renderNotesList();
+        if (activePanel === 'tags') renderPanel('tags');
+      }
+
+      function promptDeleteTag(tag) {
+        if (tagDeleteTimer) clearTimeout(tagDeleteTimer);
+        tagDeletePending = tag;
+        if (activePanel === 'tags') renderPanel('tags');
+        tagDeleteTimer = setTimeout(() => {
+          tagDeletePending = null;
+          tagDeleteTimer   = null;
+          if (activePanel === 'tags') renderPanel('tags');
+        }, 2500);
+      }
+
+      function executeDeleteTag(tag) {
+        clearTimeout(tagDeleteTimer);
+        tagDeletePending = null;
+        tagDeleteTimer   = null;
+        const idx = tags.indexOf(tag);
+        if (idx > -1) tags.splice(idx, 1);
+        saveTags();
+        // Strip tag from notes
+        Object.keys(notes).forEach(iso => {
+          if (notes[iso].tag === tag) {
+            notes[iso] = { ...notes[iso], tag: '' };
+            fbSave(iso, notes[iso].text, '', notes[iso].cost, notes[iso].attachments);
+          }
+        });
+        cacheNotes();
+        recomputeTagCounts();
+        renderNotesList();
+        if (activePanel === 'tags') renderPanel('tags');
+      }
+
       // ── MILESTONE DATES ──
       function loadMilestoneDates() {
         try { milestoneDates = JSON.parse(localStorage.getItem(MILESTONE_DATES_KEY)) || {}; }
@@ -1946,7 +2102,7 @@
       }
 
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); closeMilestoneEdit(); }
+        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); closeMilestoneEdit(); closeTagEditor(); }
       });
 
       // ── INIT ──
