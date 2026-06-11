@@ -1386,31 +1386,52 @@
       }
       .btn-take-now:hover { background: rgba(255,77,77,0.2); }
 
-      /* Meds add/edit modal timings */
-      .med-timing-input-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-      .med-timing-input-row input[type="time"] {
+      /* Meds add/edit modal — slot picker */
+      .day-chip {
         background: var(--bg-section); border: 1px solid var(--border);
-        border-radius: 2px; color: var(--text-primary);
-        padding: 7px 10px; font-size: 0.82rem; font-family: var(--mono);
-        outline: none; color-scheme: dark; transition: border-color 0.15s; flex: 1;
-      }
-      .med-timing-input-row input[type="time"]:focus { border-color: var(--accent); }
-      .btn-remove-timing {
-        background: none; border: 1px solid rgba(255,77,77,0.4);
-        border-radius: 2px; color: var(--delete-color);
-        width: 28px; height: 28px; display: flex; align-items: center;
-        justify-content: center; cursor: pointer; transition: background 0.15s; flex-shrink: 0;
-      }
-      .btn-remove-timing:hover { background: rgba(255,77,77,0.1); }
-      .btn-add-timing {
-        background: none; border: 1px dashed var(--border-hot);
         border-radius: 2px; color: var(--text-secondary);
-        padding: 7px 14px; font-family: var(--mono); font-size: 0.66rem;
-        font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-        cursor: pointer; transition: border-color 0.15s, color 0.15s;
-        margin-top: 4px; width: 100%;
+        font-family: var(--mono); font-size: 0.62rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 1px;
+        padding: 6px 10px; cursor: pointer;
+        transition: border-color 0.15s, color 0.15s, background 0.15s;
       }
-      .btn-add-timing:hover { border-color: var(--accent); color: var(--accent); }
+      .day-chip:hover { border-color: var(--accent); color: var(--accent); }
+      .day-chip.active {
+        border-color: var(--accent); color: var(--accent);
+        background: var(--accent-faint); box-shadow: 0 0 8px rgba(0,255,157,0.1);
+      }
+      .day-chips-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+      .slot-master-row {
+        display: flex; align-items: center; gap: 10px;
+        margin: 12px 0 6px; padding-top: 10px;
+        border-top: 1px dashed var(--border);
+      }
+      .slot-master-label {
+        font-size: 0.6rem; font-weight: 700; color: var(--text-secondary);
+        text-transform: uppercase; letter-spacing: 1.5px;
+      }
+      .prepost-seg {
+        display: inline-flex; border: 1px solid var(--border);
+        border-radius: 2px; overflow: hidden;
+      }
+      .prepost-seg button {
+        background: none; border: none; color: var(--text-secondary);
+        font-family: var(--mono); font-size: 0.62rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 1px;
+        padding: 5px 12px; cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+      }
+      .prepost-seg button + button { border-left: 1px solid var(--border); }
+      .prepost-seg button:hover { color: var(--accent); }
+      .prepost-seg button.active { background: var(--accent); color: var(--bg-primary); }
+      .prepost-seg.disabled { opacity: 0.3; pointer-events: none; }
+      .meal-slot-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 8px 0; border-bottom: 1px solid var(--border);
+      }
+      .meal-slot-row:last-child { border-bottom: none; }
+      .meal-chip { min-width: 104px; text-align: left; }
+      .slot-time-hint { font-size: 0.62rem; color: var(--text-secondary); margin-left: auto; letter-spacing: 0.5px; }
 
       /* ── NOTES / HISTORY / TAGS pages (reuse panel styles) ── */
       .page-section-title {
@@ -1481,6 +1502,41 @@
       .appt-banner-when.soon   { color: var(--t3-color); }
       .appt-banner-date { font-size: 0.62rem; color: var(--cyan); white-space: nowrap; }
       .appt-banner-text { flex: 1; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      /* ── MED DOSE BANNER ── */
+      #medBanner {
+        display: none;
+        background: rgba(255,77,77,0.05);
+        border-bottom: 1px solid var(--border-hot);
+        box-shadow: 0 2px 14px rgba(0,255,157,0.05);
+      }
+      .med-banner-inner {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 16px;
+      }
+      .med-banner-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.72rem;
+      }
+      .med-banner-row:last-child { border-bottom: none; }
+      .med-banner-when {
+        font-size: 0.62rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        white-space: nowrap;
+        min-width: 84px;
+      }
+      .med-banner-when.due  { color: var(--delete-color); }
+      .med-banner-when.next { color: var(--accent); }
+      .med-banner-med  { color: var(--text-primary); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .med-banner-slot { font-size: 0.64rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+      .med-banner-time { font-size: 0.62rem; color: var(--text-secondary); white-space: nowrap; flex: 1; }
 
       /* ── ACCESSIBILITY: kill all motion if user prefers ── */
       @media (prefers-reduced-motion: reduce) {
@@ -1566,6 +1622,11 @@
     <!-- APPOINTMENT BANNER -->
     <div id="apptBanner">
       <div class="appt-banner-inner" id="apptBannerContent"></div>
+    </div>
+
+    <!-- MED DOSE BANNER -->
+    <div id="medBanner">
+      <div class="med-banner-inner" id="medBannerContent"></div>
     </div>
 
     <!-- HOME VIEW -->
@@ -1794,9 +1855,19 @@
           </div>
         </div>
         <div class="modal-field">
-          <label class="modal-label">Daily Timings</label>
-          <div id="medTimingsContainer"></div>
-          <button class="btn-add-timing" onclick="addMedTimingInput()">＋ Add Timing</button>
+          <label class="modal-label">Slots</label>
+          <div>
+            <button type="button" class="day-chip" id="everydayChip" onclick="toggleEveryday()">Everyday</button>
+            <div class="day-chips-row" id="dayChipsRow" style="display:none"></div>
+          </div>
+          <div class="slot-master-row">
+            <span class="slot-master-label">Pre / Post (all slots)</span>
+            <div class="prepost-seg" id="masterPrePost">
+              <button type="button" id="masterPreBtn"  onclick="setMedMaster('pre')">Pre</button>
+              <button type="button" id="masterPostBtn" onclick="setMedMaster('post')">Post</button>
+            </div>
+          </div>
+          <div id="mealSlotRows"></div>
         </div>
         <div class="modal-actions">
           <button class="btn btn-cancel" onclick="closeMedModal()">Cancel</button>
@@ -2204,6 +2275,7 @@
           else if (page === 'history') renderHistoryPage(c);
         }
         updateNavActive();
+        updateMedBanner();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
@@ -2543,6 +2615,7 @@
         renderNotesList();
         renderCalendar();
         updateApptBanner();
+        updateMedBanner();
         refreshPageContent();
       }
 
@@ -2925,9 +2998,43 @@
       }
 
       // ── MEDS ──
+      // med = { id, name, startDate, endDate, days: [0..6 Mon-first], slots: [{ key, meal, when, time }] }
+      // medDone[medId][iso][slot.key] = true
+      const MEALS = ['breakfast', 'lunch', 'dinner'];
+      const SLOT_TIMES = {
+        'pre-breakfast':  '07:30', 'post-breakfast': '09:00',
+        'pre-lunch':      '12:30', 'post-lunch':     '14:00',
+        'pre-dinner':     '19:00', 'post-dinner':    '20:30',
+      };
+      const ALL_DAYS = [0,1,2,3,4,5,6];
+
+      function slotLabel(slot) {
+        return `${slot.when.toUpperCase()} ${slot.meal.toUpperCase()}`;
+      }
+
+      // Convert legacy time-only meds ({ timings: ['08:00'] }) into the slot model.
+      // Keeps the original key and time so done-history and alert state survive.
+      function migrateMeds() {
+        meds.forEach(med => {
+          if (!Array.isArray(med.days) || !med.days.length) med.days = [...ALL_DAYS];
+          if (!Array.isArray(med.slots)) {
+            const seen = new Set();
+            med.slots = (med.timings || []).map(t => {
+              const h = parseInt(t.split(':')[0], 10) || 0;
+              const meal = h < 11 ? 'breakfast' : h < 17 ? 'lunch' : 'dinner';
+              const mealHour = meal === 'breakfast' ? 8.5 : meal === 'lunch' ? 13 : 19.5;
+              const when = h < mealHour ? 'pre' : 'post';
+              return { key: t, meal, when, time: t };
+            }).filter(s => { if (seen.has(s.key)) return false; seen.add(s.key); return true; });
+            delete med.timings;
+          }
+        });
+      }
+
       function loadMeds() {
         try { meds    = JSON.parse(localStorage.getItem(MEDS_KEY))      || []; } catch { meds    = []; }
         try { medDone = JSON.parse(localStorage.getItem(MEDS_DONE_KEY)) || {}; } catch { medDone = {}; }
+        migrateMeds();
       }
 
       async function loadMedsFromFirebase() {
@@ -2938,6 +3045,7 @@
           ]);
           if (listSnap.exists) {
             meds = listSnap.data().meds || [];
+            migrateMeds();
             localStorage.setItem(MEDS_KEY, JSON.stringify(meds));
           }
           if (doneSnap.exists) {
@@ -2963,46 +3071,78 @@
         }).catch(e => console.warn('Firestore medDone save failed:', e));
       }
 
+      function dayOfWeekMon(date) { return (date.getDay() + 6) % 7; } // Mon=0 … Sun=6
+
+      function medDaysSummary(med) {
+        const days = med.days || ALL_DAYS;
+        if (days.length === 7) return 'Everyday';
+        return days.slice().sort((a,b) => a-b).map(i => DAY_ABBREV[i]).join(' · ');
+      }
+
+      function isMedScheduledOn(med, date) {
+        const iso = dateToISO(date);
+        if (iso < med.startDate || iso > med.endDate) return false;
+        return (med.days || ALL_DAYS).includes(dayOfWeekMon(date));
+      }
+
+      // All doses scheduled on a date, sorted by time, with done state.
+      function dosesForDate(date) {
+        const iso = dateToISO(date);
+        const out = [];
+        meds.forEach(med => {
+          if (!isMedScheduledOn(med, date)) return;
+          (med.slots || []).forEach(slot => {
+            out.push({ med, slot, iso, done: medDone[med.id]?.[iso]?.[slot.key] === true });
+          });
+        });
+        return out.sort((a,b) => a.slot.time.localeCompare(b.slot.time));
+      }
+
       function renderMedsPage(c) {
-        const todayISO = dateToISO(new Date());
         const now = new Date();
+        const todayISO = dateToISO(now);
         const nowMin = now.getHours() * 60 + now.getMinutes();
 
         const cards = meds.map(med => {
           const active = todayISO >= med.startDate && todayISO <= med.endDate;
           const future = todayISO < med.startDate;
+          const scheduledToday = isMedScheduledOn(med, now);
           const statusLabel = active
-            ? `<span class="med-card-status" style="color:var(--accent)">● Active</span>`
+            ? `<span class="med-card-status" style="color:var(--accent)">● Active · ${medDaysSummary(med)}</span>`
             : future
               ? `<span class="med-card-status" style="color:var(--text-secondary)">○ Starts ${med.startDate}</span>`
               : `<span class="med-card-status" style="color:var(--text-secondary)">○ Ended</span>`;
 
-          let timingsHtml = '';
-          if (med.timings && med.timings.length > 0) {
-            const rows = med.timings.map(timing => {
-              const [h, m] = timing.split(':').map(Number);
+          let slotsHtml = '';
+          if (med.slots && med.slots.length > 0) {
+            const rows = med.slots.map(slot => {
+              const [h, m] = slot.time.split(':').map(Number);
               const tMin = h * 60 + m;
-              const isDone = medDone[med.id]?.[todayISO]?.[timing] === true;
+              const isDone = medDone[med.id]?.[todayISO]?.[slot.key] === true;
               let statusEl = '', actionEl = '';
-              if (!active) {
-                statusEl = `<span class="timing-upcoming">${active ? '' : '—'}</span>`;
+              if (!active || !scheduledToday) {
+                statusEl = `<span class="timing-upcoming">—</span>`;
               } else if (isDone) {
                 statusEl = `<span class="timing-done"><svg class="icon" style="width:12px;height:12px"><use href="#i-check"/></svg> Done</span>`;
               } else if (nowMin >= tMin) {
-                statusEl = `<span class="timing-overdue">⚠ Overdue</span>`;
-                actionEl = `<button class="btn-take-now" onclick="markMedDone('${med.id}','${timing}','${todayISO}')">Mark Done</button>`;
+                statusEl = `<span class="timing-overdue">⚠ Past due</span>`;
+                actionEl = `<button class="btn-take-now" onclick="markMedDone('${med.id}','${slot.key}','${todayISO}')">Mark Done</button>`;
               } else {
                 statusEl = `<span class="timing-upcoming">Upcoming</span>`;
-                actionEl = `<button class="btn-mark-done" onclick="markMedDone('${med.id}','${timing}','${todayISO}')">Mark Done</button>`;
+                actionEl = `<button class="btn-mark-done" onclick="markMedDone('${med.id}','${slot.key}','${todayISO}')">Mark Done</button>`;
               }
               return `<div class="med-timing-row">
-                <span class="med-timing-time">${timing}</span>
+                <span class="med-timing-time" style="min-width:150px;font-size:0.7rem">${slotLabel(slot)}</span>
+                <span style="font-size:0.64rem;color:var(--text-secondary);min-width:48px">${slot.time}</span>
                 <span class="med-timing-status">${statusEl}</span>
                 ${actionEl}
               </div>`;
             }).join('');
-            timingsHtml = `<div class="med-timings-section">
-              <div class="med-timings-label">Today's Doses — ${todayISO}</div>
+            const heading = active && !scheduledToday
+              ? `Not scheduled today (${medDaysSummary(med)})`
+              : `Today's Doses — ${todayISO}`;
+            slotsHtml = `<div class="med-timings-section">
+              <div class="med-timings-label">${heading}</div>
               ${rows}
             </div>`;
           }
@@ -3023,7 +3163,7 @@
                 </button>
               </div>
             </div>
-            ${timingsHtml}
+            ${slotsHtml}
           </div>`;
         }).join('') || `<div class="page-empty">No medications added yet. Use ＋ Add Medication to get started.</div>`;
 
@@ -3035,6 +3175,9 @@
           <div class="meds-grid">${cards}</div>`;
       }
 
+      // Modal slot-picker state
+      let medModalState = null;
+
       function openMedModal(id) {
         editingMedId = id;
         const med = id ? meds.find(m => m.id === id) : null;
@@ -3043,11 +3186,20 @@
         document.getElementById('medStartInput').value = med ? med.startDate : dateToISO(START_DATE);
         document.getElementById('medEndInput').value   = med ? med.endDate   : dateToISO(addDays(START_DATE, 280));
 
-        const container = document.getElementById('medTimingsContainer');
-        container.innerHTML = '';
-        const timings = med ? med.timings : [];
-        timings.forEach(t => addMedTimingInputRow(t, container));
+        medModalState = {
+          days: new Set(med ? (med.days || ALL_DAYS) : ALL_DAYS),
+          // expand the weekday row when editing a med that isn't everyday
+          daysExpanded: !!(med && (med.days || ALL_DAYS).length !== 7),
+          master: 'post',
+          meals: {},
+        };
+        MEALS.forEach(meal => {
+          const existing = med ? (med.slots || []).find(s => s.meal === meal) : null;
+          medModalState.meals[meal] = { on: !!existing, when: existing ? existing.when : null };
+        });
 
+        renderMedDayChips();
+        renderMedSlotRows();
         document.getElementById('medModalBackdrop').classList.add('open');
         document.getElementById('medNameInput').focus();
       }
@@ -3061,19 +3213,69 @@
         if (e.target === document.getElementById('medModalBackdrop')) closeMedModal();
       }
 
-      function addMedTimingInput() {
-        addMedTimingInputRow('08:00', document.getElementById('medTimingsContainer'));
+      // EVERYDAY chip: reveals all 7 weekday chips checked; re-clicking re-checks all
+      function toggleEveryday() {
+        medModalState.days = new Set(ALL_DAYS);
+        medModalState.daysExpanded = true;
+        renderMedDayChips();
       }
 
-      function addMedTimingInputRow(value, container) {
-        const row = document.createElement('div');
-        row.className = 'med-timing-input-row';
-        row.innerHTML = `
-          <input type="time" value="${value}" />
-          <button class="btn-remove-timing" onclick="this.parentElement.remove()" title="Remove">
-            <svg class="icon" style="width:13px;height:13px"><use href="#i-x"/></svg>
-          </button>`;
-        container.appendChild(row);
+      function toggleMedDay(i) {
+        if (medModalState.days.has(i)) medModalState.days.delete(i);
+        else medModalState.days.add(i);
+        renderMedDayChips();
+      }
+
+      function renderMedDayChips() {
+        const allChecked = medModalState.days.size === 7;
+        document.getElementById('everydayChip').classList.toggle('active', allChecked);
+        const row = document.getElementById('dayChipsRow');
+        row.style.display = medModalState.daysExpanded ? 'flex' : 'none';
+        if (medModalState.daysExpanded) {
+          row.innerHTML = DAY_ABBREV.map((d, i) =>
+            `<button type="button" class="day-chip${medModalState.days.has(i) ? ' active' : ''}" onclick="toggleMedDay(${i})">${d}</button>`
+          ).join('');
+        }
+      }
+
+      // Master Pre/Post — applies to every selected slot (each row can still be overridden)
+      function setMedMaster(when) {
+        medModalState.master = when;
+        MEALS.forEach(meal => {
+          if (medModalState.meals[meal].on) medModalState.meals[meal].when = when;
+        });
+        renderMedSlotRows();
+      }
+
+      function toggleMedMeal(meal) {
+        const s = medModalState.meals[meal];
+        s.on = !s.on;
+        if (s.on && !s.when) s.when = medModalState.master;
+        renderMedSlotRows();
+      }
+
+      function setMedMealWhen(meal, when) {
+        medModalState.meals[meal].on = true;
+        medModalState.meals[meal].when = when;
+        renderMedSlotRows();
+      }
+
+      function renderMedSlotRows() {
+        document.getElementById('masterPreBtn').classList.toggle('active', medModalState.master === 'pre');
+        document.getElementById('masterPostBtn').classList.toggle('active', medModalState.master === 'post');
+        document.getElementById('mealSlotRows').innerHTML = MEALS.map(meal => {
+          const s = medModalState.meals[meal];
+          const when = s.when || medModalState.master;
+          const time = SLOT_TIMES[`${when}-${meal}`];
+          return `<div class="meal-slot-row">
+            <button type="button" class="day-chip meal-chip${s.on ? ' active' : ''}" onclick="toggleMedMeal('${meal}')">${s.on ? '✓ ' : ''}${meal}</button>
+            <div class="prepost-seg${s.on ? '' : ' disabled'}">
+              <button type="button" class="${s.on && when === 'pre'  ? 'active' : ''}" onclick="setMedMealWhen('${meal}','pre')">Pre</button>
+              <button type="button" class="${s.on && when === 'post' ? 'active' : ''}" onclick="setMedMealWhen('${meal}','post')">Post</button>
+            </div>
+            <span class="slot-time-hint">${s.on ? '~ ' + time : ''}</span>
+          </div>`;
+        }).join('');
       }
 
       function saveMedModal() {
@@ -3085,18 +3287,30 @@
         if (!end)   { alert('Please enter an end date.'); return; }
         if (start > end) { alert('End date must be after start date.'); return; }
 
-        const timingInputs = document.querySelectorAll('#medTimingsContainer input[type="time"]');
-        const timings = [...timingInputs].map(i => i.value).filter(Boolean).sort();
+        const days = [...medModalState.days].sort((a,b) => a-b);
+        if (!days.length) { alert('Select at least one day of the week.'); return; }
 
-        if (editingMedId) {
-          const m = meds.find(x => x.id === editingMedId);
-          if (m) { m.name = name; m.startDate = start; m.endDate = end; m.timings = timings; }
+        const oldMed = editingMedId ? meds.find(x => x.id === editingMedId) : null;
+        const slots = MEALS.filter(meal => medModalState.meals[meal].on).map(meal => {
+          const when = medModalState.meals[meal].when || medModalState.master;
+          // reuse a matching existing slot's key/time so today's done-history survives edits
+          const prev = oldMed && (oldMed.slots || []).find(s => s.meal === meal && s.when === when);
+          const key  = `${when}-${meal}`;
+          return prev ? { ...prev } : { key, meal, when, time: SLOT_TIMES[key] };
+        });
+        if (!slots.length) { alert('Select at least one slot (breakfast, lunch or dinner).'); return; }
+
+        if (oldMed) {
+          oldMed.name = name; oldMed.startDate = start; oldMed.endDate = end;
+          oldMed.days = days; oldMed.slots = slots;
+          delete oldMed.timings;
         } else {
-          meds.push({ id: 'med-' + Date.now(), name, startDate: start, endDate: end, timings });
+          meds.push({ id: 'med-' + Date.now(), name, startDate: start, endDate: end, days, slots });
         }
         saveMeds();
         closeMedModal();
-        if (currentPage === 'meds') navigateTo('meds');
+        refreshPageContent();
+        updateMedBanner();
       }
 
       function deleteMed(id) {
@@ -3105,22 +3319,84 @@
         delete medDone[id];
         saveMeds();
         saveMedDone();
-        if (currentPage === 'meds') navigateTo('meds');
+        refreshPageContent();
+        updateMedBanner();
       }
 
-      function markMedDone(medId, timing, iso) {
+      function markMedDone(medId, slotKey, iso) {
         if (!medDone[medId]) medDone[medId] = {};
         if (!medDone[medId][iso]) medDone[medId][iso] = {};
-        medDone[medId][iso][timing] = true;
+        medDone[medId][iso][slotKey] = true;
         saveMedDone();
-        if (currentPage === 'meds') navigateTo('meds');
+        refreshPageContent();
+        updateMedBanner();
+      }
+
+      // ── MED DOSE BANNER (homepage, below nav) ──
+      function findNextDose(from) {
+        for (let i = 1; i <= 30; i++) {
+          const d = addDays(from, i);
+          const list = dosesForDate(d).filter(x => !x.done);
+          if (list.length) return { ...list[0], date: d };
+        }
+        return null;
+      }
+
+      function updateMedBanner() {
+        const banner  = document.getElementById('medBanner');
+        const content = document.getElementById('medBannerContent');
+        if (!banner || !content) return;
+        // redundant on the meds page itself
+        if (currentPage === 'meds') { banner.style.display = 'none'; return; }
+
+        const now = new Date();
+        const nowHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const today = dosesForDate(now);
+        const overdue  = today.filter(d => !d.done && d.slot.time <= nowHM);
+        const upcoming = today.filter(d => !d.done && d.slot.time > nowHM);
+
+        const rows = [];
+        overdue.forEach(d => {
+          rows.push(`<div class="med-banner-row">
+            <span class="med-banner-when due">⚠ Past due</span>
+            <span class="med-banner-med">${escapeHtml(d.med.name)}</span>
+            <span class="med-banner-slot">${slotLabel(d.slot)}</span>
+            <span class="med-banner-time">${d.slot.time}</span>
+            <button class="btn-take-now" onclick="markMedDone('${d.med.id}','${d.slot.key}','${d.iso}')">Mark Done</button>
+          </div>`);
+        });
+
+        const next = upcoming[0] || findNextDose(now);
+        if (next) {
+          let whenTxt;
+          if (next.date) {
+            const diff = Math.round((new Date(dateToISO(next.date)+'T00:00:00') - new Date(dateToISO(now)+'T00:00:00')) / 86400000);
+            whenTxt = (diff === 1 ? 'Tomorrow' : isoToDisplay(next.iso)) + ` · ${next.slot.time}`;
+          } else {
+            const [h, m] = next.slot.time.split(':').map(Number);
+            const mins = h * 60 + m - (now.getHours() * 60 + now.getMinutes());
+            whenTxt = `in ${mins >= 60 ? Math.floor(mins/60) + 'h ' : ''}${mins % 60}m · ${next.slot.time}`;
+          }
+          rows.push(`<div class="med-banner-row">
+            <span class="med-banner-when next">Next dose</span>
+            <span class="med-banner-med">${escapeHtml(next.med.name)}</span>
+            <span class="med-banner-slot">${slotLabel(next.slot)}</span>
+            <span class="med-banner-time">${whenTxt}</span>
+            <button class="btn-mark-done" onclick="navigateTo('meds')">View</button>
+          </div>`);
+        }
+
+        if (!rows.length) { banner.style.display = 'none'; return; }
+        banner.style.display = 'block';
+        content.innerHTML = rows.join('');
       }
 
       // ── MED ALERTS ──
       function checkMedAlerts() {
+        updateMedBanner();
         const now = new Date();
         const todayISO = dateToISO(now);
-        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const nowHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
         // Load persisted shown-alerts for today
         try {
@@ -3128,28 +3404,22 @@
           shownAlertsToday = new Set(stored.date === todayISO ? (stored.shown || []) : []);
         } catch { shownAlertsToday = new Set(); }
 
-        for (const med of meds) {
-          if (todayISO < med.startDate || todayISO > med.endDate) continue;
-          for (const timing of (med.timings || [])) {
-            const [h, m] = timing.split(':').map(Number);
-            if (nowMin < h * 60 + m) continue;
-            const isDone = medDone[med.id]?.[todayISO]?.[timing] === true;
-            if (isDone) continue;
-            const key = `${med.id}:${timing}`;
-            if (shownAlertsToday.has(key)) continue;
-            shownAlertsToday.add(key);
-            // Persist
-            localStorage.setItem(ALERTS_SHOWN_KEY, JSON.stringify({ date: todayISO, shown: [...shownAlertsToday] }));
-            showMedAlert(med.name, timing, med.id);
-            return; // show one at a time
-          }
+        for (const dose of dosesForDate(now)) {
+          if (dose.done || dose.slot.time > nowHM) continue;
+          const key = `${dose.med.id}:${dose.slot.key}`;
+          if (shownAlertsToday.has(key)) continue;
+          shownAlertsToday.add(key);
+          // Persist
+          localStorage.setItem(ALERTS_SHOWN_KEY, JSON.stringify({ date: todayISO, shown: [...shownAlertsToday] }));
+          showMedAlert(dose.med.name, `${slotLabel(dose.slot)} (${dose.slot.time})`, dose.med.id);
+          return; // show one at a time
         }
       }
 
       function showMedAlert(medName, timing, medId) {
         document.getElementById('medAlertBody').innerHTML =
           `<strong style="color:var(--text-primary)">${escapeHtml(medName)}</strong><br>
-           was scheduled at <strong>${timing}</strong> and has not been marked as done.`;
+           was scheduled at <strong>${escapeHtml(timing)}</strong> and has not been marked as done.`;
         document.getElementById('medAlertBackdrop').classList.add('open');
         // store context for "Take Me There"
         document.getElementById('medAlertBackdrop').dataset.medId = medId;
@@ -3313,6 +3583,7 @@
         renderCalendar();
         renderNotesList();
         updateApptBanner();
+        updateMedBanner();
         updateNavActive();
 
         await loadNotes();
@@ -3322,6 +3593,7 @@
         updateApptBanner();
 
         await loadMedsFromFirebase();
+        updateMedBanner();
         if (currentPage === 'meds') refreshPageContent();
 
         // Check med alerts immediately, then every minute
