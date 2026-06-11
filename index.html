@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Journal</title>
 
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://firestore.googleapis.com" />
+    <link rel="dns-prefetch" href="https://www.gstatic.com" />
+    <!-- Non-blocking font load: swaps in when ready instead of blocking first paint -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet" /></noscript>
 
     <style>
       /* ════ MATRIX THEME — interaction-only animations ════ */
@@ -726,8 +727,6 @@
       .badge-t1 { background: rgba(255,46,136,0.15); color: var(--t1-color); border: 1px solid rgba(255,46,136,0.3); }
       .badge-t2 { background: rgba(0,212,255,0.12);  color: var(--t2-color); border: 1px solid rgba(0,212,255,0.3); }
       .badge-t3 { background: rgba(255,184,0,0.12);  color: var(--t3-color); border: 1px solid rgba(255,184,0,0.3); }
-      .note-indicator { position: absolute; bottom: 3px; right: 4px; color: var(--accent); line-height: 1; }
-      .note-indicator .icon { width: 10px; height: 10px; }
 
       /* Click ripple — one-shot, node removed on animationend */
       .ripple {
@@ -1891,6 +1890,10 @@
       </div>
     </div>
 
+    <!-- SDKs at end of body: HTML/CSS paint immediately, scripts fetched in parallel by the preload scanner -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
     <script>
       // ── THEMES ──
       const THEME_KEY = 'journalTheme';
@@ -2013,6 +2016,10 @@
       ];
       firebase.initializeApp(FIREBASE_CONFIG);
       const db = firebase.firestore();
+      // IndexedDB persistence: snapshots resolve from local cache instantly and only
+      // changed documents cross the network afterwards (huge read-count reduction).
+      const persistenceReady = db.enablePersistence({ synchronizeTabs: true })
+        .catch(() => { /* unsupported browser or another precondition — network mode still works */ });
 
       // ── STATE ──
       // notes[iso] = { text: string, tag: string, cost: string, visitNum: number|null }
@@ -2036,7 +2043,6 @@
       let medDone          = {};
       let editingMedId     = null;
       let shownAlertsToday = new Set();
-      let medAlertQueue    = [];
       let medAlertInterval = null;
 
       // ── UTILITY ──
@@ -2066,16 +2072,21 @@
       }
 
       // ── TAGS ──
+      let tagColorMap = new Map();
+      function rebuildTagColors() {
+        tagColorMap = new Map(tags.map((t, i) => [t, TAG_COLORS[i % TAG_COLORS.length]]));
+      }
       function loadTags() {
         try { tags = JSON.parse(localStorage.getItem(TAGS_KEY)) || [...DEFAULT_TAGS]; }
         catch { tags = [...DEFAULT_TAGS]; }
         DEFAULT_TAGS.forEach(t => { if (!tags.includes(t)) tags.unshift(t); });
+        rebuildTagColors();
       }
-      function saveTags() { localStorage.setItem(TAGS_KEY, JSON.stringify(tags)); }
-      function tagColor(tag) {
-        const i = tags.indexOf(tag);
-        return TAG_COLORS[Math.max(0,i) % TAG_COLORS.length];
+      function saveTags() {
+        localStorage.setItem(TAGS_KEY, JSON.stringify(tags));
+        rebuildTagColors();
       }
+      function tagColor(tag) { return tagColorMap.get(tag) || TAG_COLORS[0]; }
 
       function recomputeTagCounts() {
         tagCounts = {};
@@ -2188,17 +2199,26 @@
         } catch { notes = {}; }
       }
 
-      async function loadNotes() {
-        loadLocalNotes();
-        try {
-          const snap = await db.collection(FIRESTORE_COLLECTION).get();
-          notes = {};
-          snap.forEach(doc => {
-            const d = doc.data();
-            notes[doc.id] = migrateNote(d);
-          });
+      // Live listener instead of a full-collection get() per page load:
+      // first snapshot rebuilds state (and is served from IndexedDB when cached),
+      // every later snapshot applies only the changed documents.
+      function subscribeNotes() {
+        let first = true;
+        db.collection(FIRESTORE_COLLECTION).onSnapshot(snap => {
+          if (first) {
+            first = false;
+            notes = {};
+            snap.forEach(doc => { notes[doc.id] = migrateNote(doc.data()); });
+          } else {
+            snap.docChanges().forEach(ch => {
+              if (ch.doc.metadata.hasPendingWrites) return; // local echo — state already current
+              if (ch.type === 'removed') delete notes[ch.doc.id];
+              else notes[ch.doc.id] = migrateNote(ch.doc.data());
+            });
+          }
           cacheNotes();
-        } catch(e) { console.warn('Firestore load failed:', e); }
+          scheduleRefresh();
+        }, e => console.warn('Firestore notes listener failed:', e));
       }
 
       function cacheNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
@@ -2429,13 +2449,12 @@
       }
 
       // ── CALENDAR ──
-      function getMonths() {
+      const MONTHS_LIST = (() => {
         const m = [];
-        for (let i=0; i<10; i++) {
-          m.push({ year: i<8?2026:2027, month: (4+i)%12 });
-        }
+        for (let i=0; i<10; i++) m.push({ year: i<8?2026:2027, month: (4+i)%12 });
         return m;
-      }
+      })();
+      function getMonths() { return MONTHS_LIST; }
 
       let selectedMonthIdx = (() => {
         const now = new Date();
@@ -2552,10 +2571,7 @@
               cell.appendChild(ind);
             }
 
-            cell.addEventListener('click', (e) => {
-              spawnRipple(e, cell);
-              notes[iso] ? openNoteDetail(iso) : openModal(iso);
-            });
+            cell.dataset.iso = iso; // click handled by one delegated listener on #calendarArea
             grid.appendChild(cell);
           }
           cursor.setDate(cursor.getDate()+7);
@@ -2563,6 +2579,15 @@
 
         card.appendChild(grid);
         area.appendChild(card);
+      }
+
+      // Single delegated listener — replaces ~45 per-cell closures recreated on every render
+      function onCalendarClick(e) {
+        const cell = e.target.closest('.day-cell');
+        if (!cell || !cell.dataset.iso) return;
+        spawnRipple(e, cell);
+        const iso = cell.dataset.iso;
+        notes[iso] ? openNoteDetail(iso) : openModal(iso);
       }
 
       // ── PROGRESS ──
@@ -2587,16 +2612,23 @@
         document.getElementById('tilePctSub').textContent  = `${rem} weeks remaining`;
       }
 
-      function renderNotesList() { /* sidebar notes removed */ }
-
-      function refreshAll() {
-        recomputeTagCounts();
-        renderNotesList();
-        renderCalendar();
-        updateApptBanner();
-        updateMedBanner();
-        refreshPageContent();
+      // Coalesce bursts of state changes (user save + Firestore echo + listener
+      // deltas) into a single repaint per animation frame.
+      let refreshQueued = false;
+      function scheduleRefresh() {
+        if (refreshQueued) return;
+        refreshQueued = true;
+        requestAnimationFrame(() => {
+          refreshQueued = false;
+          recomputeTagCounts();
+          renderCalendar();
+          updateApptBanner();
+          updateMedBanner();
+          updateProgress();
+          refreshPageContent();
+        });
       }
+      function refreshAll() { scheduleRefresh(); }
 
       function refreshPageContent() {
         if (currentPage === 'home') return;
@@ -2846,7 +2878,6 @@
         }
         closeTagEditor();
         recomputeTagCounts();
-        renderNotesList();
         if (currentPage === 'tags') navigateTo('tags');
       }
 
@@ -2876,7 +2907,6 @@
         });
         cacheNotes();
         recomputeTagCounts();
-        renderNotesList();
         if (currentPage === 'tags') navigateTo('tags');
       }
 
@@ -2909,9 +2939,6 @@
         milestones.forEach(m => { milestoneDates[m.label] = m.date; });
         localStorage.setItem(MILESTONE_DATES_KEY, JSON.stringify(milestoneDates));
       }
-      // kept for backward compat in updateProgress
-      function loadMilestoneDates() { loadMilestones(); }
-      function persistMilestoneDates() { saveMilestones(); }
 
       function openAddMilestone() {
         editingMilestone = null;
@@ -2970,8 +2997,6 @@
         if (currentPage === 'dates') navigateTo('dates');
       }
 
-      // kept for backward compat
-      function saveMilestoneDate() { saveMilestoneEdit(); }
       function handleMilestoneBackdropClick(e) {
         if (e.target === document.getElementById('milestoneBackdrop')) closeMilestoneEdit();
       }
@@ -3016,22 +3041,20 @@
         migrateMeds();
       }
 
-      async function loadMedsFromFirebase() {
-        try {
-          const [listSnap, doneSnap] = await Promise.all([
-            db.collection(MEDS_COLLECTION).doc('list').get(),
-            db.collection(MEDS_COLLECTION).doc('done').get(),
-          ]);
-          if (listSnap.exists) {
-            meds = listSnap.data().meds || [];
-            migrateMeds();
-            localStorage.setItem(MEDS_KEY, JSON.stringify(meds));
-          }
-          if (doneSnap.exists) {
-            medDone = doneSnap.data().medDone || {};
-            localStorage.setItem(MEDS_DONE_KEY, JSON.stringify(medDone));
-          }
-        } catch(e) { console.warn('Firestore meds load failed:', e); }
+      function subscribeMeds() {
+        db.collection(MEDS_COLLECTION).doc('list').onSnapshot(snap => {
+          if (!snap.exists || snap.metadata.hasPendingWrites) return;
+          meds = snap.data().meds || [];
+          migrateMeds();
+          localStorage.setItem(MEDS_KEY, JSON.stringify(meds));
+          scheduleRefresh();
+        }, e => console.warn('Firestore meds listener failed:', e));
+        db.collection(MEDS_COLLECTION).doc('done').onSnapshot(snap => {
+          if (!snap.exists || snap.metadata.hasPendingWrites) return;
+          medDone = snap.data().medDone || {};
+          localStorage.setItem(MEDS_DONE_KEY, JSON.stringify(medDone));
+          scheduleRefresh();
+        }, e => console.warn('Firestore medDone listener failed:', e));
       }
 
       function saveMeds() {
@@ -3377,17 +3400,23 @@
       }
 
       // ── MED ALERTS ──
+      // Parse persisted alert state once per day instead of on every 60s tick
+      let alertsLoadedFor = null;
+      function loadShownAlerts(todayISO) {
+        if (alertsLoadedFor === todayISO) return;
+        try {
+          const stored = JSON.parse(localStorage.getItem(ALERTS_SHOWN_KEY)) || {};
+          shownAlertsToday = new Set(stored.date === todayISO ? (stored.shown || []) : []);
+        } catch { shownAlertsToday = new Set(); }
+        alertsLoadedFor = todayISO;
+      }
+
       function checkMedAlerts() {
         updateMedBanner();
         const now = new Date();
         const todayISO = dateToISO(now);
         const nowHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-
-        // Load persisted shown-alerts for today
-        try {
-          const stored = JSON.parse(localStorage.getItem(ALERTS_SHOWN_KEY)) || {};
-          shownAlertsToday = new Set(stored.date === todayISO ? (stored.shown || []) : []);
-        } catch { shownAlertsToday = new Set(); }
+        loadShownAlerts(todayISO);
 
         for (const dose of dosesForDate(now)) {
           if (dose.done || dose.slot.time > nowHM) continue;
@@ -3556,34 +3585,43 @@
         if (e.key === 'ArrowRight') navMonth(1);
       });
 
+      // ── MED TICKER (visibility-aware: no timer work in background tabs) ──
+      function startMedTicker() {
+        if (medAlertInterval) return;
+        checkMedAlerts();
+        medAlertInterval = setInterval(checkMedAlerts, 60000);
+      }
+      function stopMedTicker() {
+        clearInterval(medAlertInterval);
+        medAlertInterval = null;
+      }
+      document.addEventListener('visibilitychange', () => {
+        document.hidden ? stopMedTicker() : startMedTicker();
+      });
+
       // ── INIT ──
-      async function init() {
+      // First paint comes entirely from the localStorage cache — zero network on
+      // the critical path. Firestore listeners then stream deltas in the background.
+      function init() {
         loadTheme();
         loadTags();
-        loadMilestones();          // replaces loadMilestoneDates — also syncs milestoneDates
+        loadMilestones();
         loadMeds();
         loadLocalNotes();
+        recomputeTagCounts();
         updateProgress();
         buildMonthDropdown();
         renderCalendar();
-        renderNotesList();
         updateApptBanner();
         updateMedBanner();
         updateNavActive();
+        document.getElementById('calendarArea').addEventListener('click', onCalendarClick);
 
-        await loadNotes();
-        recomputeTagCounts();
-        renderNotesList();
-        renderCalendar();
-        updateApptBanner();
-
-        await loadMedsFromFirebase();
-        updateMedBanner();
-        if (currentPage === 'meds') refreshPageContent();
-
-        // Check med alerts immediately, then every minute
-        checkMedAlerts();
-        medAlertInterval = setInterval(checkMedAlerts, 60000);
+        persistenceReady.then(() => {
+          subscribeNotes();
+          subscribeMeds();
+        });
+        startMedTicker();
       }
 
       init();
