@@ -1498,8 +1498,9 @@
         white-space: nowrap;
         min-width: 72px;
       }
-      .appt-banner-when.today  { color: var(--delete-color); }
-      .appt-banner-when.soon   { color: var(--t3-color); }
+      .appt-banner-when.today    { color: var(--delete-color); }
+      .appt-banner-when.soon     { color: var(--t3-color); }
+      .appt-banner-when.upcoming { color: var(--cyan); }
       .appt-banner-date { font-size: 0.62rem; color: var(--cyan); white-space: nowrap; }
       .appt-banner-text { flex: 1; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -1524,6 +1525,8 @@
         font-size: 0.72rem;
       }
       .med-banner-row:last-child { border-bottom: none; }
+      .med-banner-row.clickable { cursor: pointer; transition: background 0.15s; }
+      .med-banner-row.clickable:hover { background: rgba(255,77,77,0.07); }
       .med-banner-when {
         font-size: 0.62rem;
         font-weight: 800;
@@ -2425,21 +2428,24 @@
         const content = document.getElementById('apptBannerContent');
         if (!banner || !content) return;
         const today = new Date(); today.setHours(0,0,0,0);
-        const todayISO = dateToISO(today);
-        const d1 = dateToISO(addDays(today, 1));
-        const d2 = dateToISO(addDays(today, 2));
+        const todayISO   = dateToISO(today);
+        const horizonISO = dateToISO(addDays(today, 3));
 
-        const hits = Object.entries(notes)
-          .filter(([iso, n]) => isApptTag(n.tag) && (iso === todayISO || iso === d1 || iso === d2))
+        const upcoming = Object.entries(notes)
+          .filter(([iso, n]) => isApptTag(n.tag) && iso >= todayISO)
           .sort((a, b) => a[0].localeCompare(b[0]));
+
+        // today + next 3 days; if empty, fall back to the next upcoming appointment
+        let hits = upcoming.filter(([iso]) => iso <= horizonISO);
+        if (!hits.length) hits = upcoming.slice(0, 1);
 
         if (!hits.length) { banner.style.display = 'none'; return; }
 
         banner.style.display = 'block';
         content.innerHTML = hits.map(([iso, n]) => {
           const diff = Math.round((new Date(iso+'T00:00:00') - today) / 86400000);
-          const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : 'In 2 days';
-          const cls   = diff === 0 ? 'today' : 'soon';
+          const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `In ${diff} days`;
+          const cls   = diff === 0 ? 'today' : diff <= 3 ? 'soon' : 'upcoming';
           return `<div class="appt-banner-row" onclick="openNoteDetail('${iso}')">
             <svg class="icon" style="color:var(--cyan);flex-shrink:0"><use href="#i-calendar"/></svg>
             <span class="appt-banner-when ${cls}">${label}</span>
@@ -3356,7 +3362,13 @@
         const upcoming = today.filter(d => !d.done && d.slot.time > nowHM);
 
         const rows = [];
-        overdue.forEach(d => {
+        if (overdue.length > 1) {
+          rows.push(`<div class="med-banner-row clickable" onclick="navigateTo('meds')">
+            <span class="med-banner-when due">⚠ Past due</span>
+            <span class="med-banner-med">${overdue.length} doses missed, click for more info</span>
+          </div>`);
+        } else if (overdue.length === 1) {
+          const d = overdue[0];
           rows.push(`<div class="med-banner-row">
             <span class="med-banner-when due">⚠ Past due</span>
             <span class="med-banner-med">${escapeHtml(d.med.name)}</span>
@@ -3364,7 +3376,7 @@
             <span class="med-banner-time">${d.slot.time}</span>
             <button class="btn-take-now" onclick="markMedDone('${d.med.id}','${d.slot.key}','${d.iso}')">Mark Done</button>
           </div>`);
-        });
+        }
 
         const next = upcoming[0] || findNextDose(now);
         if (next) {
