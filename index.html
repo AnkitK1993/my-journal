@@ -1445,6 +1445,43 @@
       .modal input[type="time"]:focus,
       .modal input[type="number"]:focus { border-color: var(--accent); }
 
+      /* ── APPOINTMENT BANNER ── */
+      #apptBanner {
+        display: none;
+        background: rgba(0,212,255,0.07);
+        border-bottom: 1px solid var(--cyan);
+        box-shadow: 0 2px 14px rgba(0,212,255,0.08);
+      }
+      .appt-banner-inner {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 16px;
+      }
+      .appt-banner-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0,212,255,0.1);
+        font-size: 0.72rem;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .appt-banner-row:last-child { border-bottom: none; }
+      .appt-banner-row:hover { background: rgba(0,212,255,0.05); }
+      .appt-banner-when {
+        font-size: 0.62rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        white-space: nowrap;
+        min-width: 72px;
+      }
+      .appt-banner-when.today  { color: var(--delete-color); }
+      .appt-banner-when.soon   { color: var(--t3-color); }
+      .appt-banner-date { font-size: 0.62rem; color: var(--cyan); white-space: nowrap; }
+      .appt-banner-text { flex: 1; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
       /* ── ACCESSIBILITY: kill all motion if user prefers ── */
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -1525,6 +1562,11 @@
         </div>
       </div>
     </nav>
+
+    <!-- APPOINTMENT BANNER -->
+    <div id="apptBanner">
+      <div class="appt-banner-inner" id="apptBannerContent"></div>
+    </div>
 
     <!-- HOME VIEW -->
     <div id="homeView">
@@ -1864,7 +1906,7 @@
       const MONTH_NAMES  = ['January','February','March','April','May','June',
                             'July','August','September','October','November','December'];
       const DAY_ABBREV   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-      const DEFAULT_TAGS = ['Gynac', 'Blood Test'];
+      const DEFAULT_TAGS = ['Gynac', 'Blood Test', 'DOC'];
       const TAG_COLORS   = ['#ff6b9d','#4ecdc4','#45b7d1','#ffd93d','#c084fc','#fb923c','#a3e635','#f87171'];
 
       // ── FIREBASE ──
@@ -2266,15 +2308,17 @@
           </div>${items}`;
       }
 
+      const APPT_TAG = 'DOC';
+
       function renderApptsPage(c) {
         const today = new Date(); today.setHours(0,0,0,0);
         const todayISO = dateToISO(today);
         const upcoming = Object.entries(notes)
-          .filter(([iso]) => iso >= todayISO)
+          .filter(([iso, n]) => n.tag === APPT_TAG && iso >= todayISO)
           .sort((a,b) => a[0].localeCompare(b[0]));
 
-        const items = upcoming.length===0
-          ? `<div class="page-empty">No upcoming appointments.</div>`
+        const items = upcoming.length === 0
+          ? `<div class="page-empty">No upcoming DOC appointments.<br><span style="font-size:0.68rem;color:var(--text-secondary)">Tag a note with <strong>DOC</strong> to see it here.</span></div>`
           : `<div class="appts-list">${upcoming.map(([iso,n]) => {
               const diff = Math.round((new Date(iso+'T00:00:00')-today)/86400000);
               const cd   = diff===0?'Today':`in ${diff} day${diff!==1?'s':''}`;
@@ -2292,6 +2336,35 @@
             }).join('')}</div>`;
 
         c.innerHTML = items;
+      }
+
+      function updateApptBanner() {
+        const banner  = document.getElementById('apptBanner');
+        const content = document.getElementById('apptBannerContent');
+        if (!banner || !content) return;
+        const today = new Date(); today.setHours(0,0,0,0);
+        const todayISO = dateToISO(today);
+        const d1 = dateToISO(addDays(today, 1));
+        const d2 = dateToISO(addDays(today, 2));
+
+        const hits = Object.entries(notes)
+          .filter(([iso, n]) => n.tag === APPT_TAG && (iso === todayISO || iso === d1 || iso === d2))
+          .sort((a, b) => a[0].localeCompare(b[0]));
+
+        if (!hits.length) { banner.style.display = 'none'; return; }
+
+        banner.style.display = 'block';
+        content.innerHTML = hits.map(([iso, n]) => {
+          const diff = Math.round((new Date(iso+'T00:00:00') - today) / 86400000);
+          const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : 'In 2 days';
+          const cls   = diff === 0 ? 'today' : 'soon';
+          return `<div class="appt-banner-row" onclick="openNoteDetail('${iso}')">
+            <svg class="icon" style="color:var(--cyan);flex-shrink:0"><use href="#i-calendar"/></svg>
+            <span class="appt-banner-when ${cls}">${label}</span>
+            <span class="appt-banner-date">${isoToDisplay(iso)}</span>
+            <span class="appt-banner-text">${escapeHtml(n.text)}</span>
+          </div>`;
+        }).join('');
       }
 
       // ── CALENDAR ──
@@ -2455,6 +2528,14 @@
 
       function renderNotesList() { /* sidebar notes removed */ }
 
+      function refreshAll() {
+        recomputeTagCounts();
+        renderNotesList();
+        renderCalendar();
+        updateApptBanner();
+        refreshPageContent();
+      }
+
       function refreshPageContent() {
         if (currentPage === 'home') return;
         const c = document.getElementById('pageContent');
@@ -2465,13 +2546,6 @@
         else if (currentPage === 'appointments') renderApptsPage(c);
         else if (currentPage === 'tags')    renderTagsPage(c);
         else if (currentPage === 'history') renderHistoryPage(c);
-      }
-
-      function refreshAll() {
-        recomputeTagCounts();
-        renderNotesList();
-        renderCalendar();
-        refreshPageContent();
       }
 
       function deleteNote(iso) {
@@ -3214,6 +3288,7 @@
         recomputeTagCounts();
         renderNotesList();
         renderCalendar();
+        updateApptBanner();
 
         await loadMedsFromFirebase();
         if (currentPage === 'meds') refreshPageContent();
