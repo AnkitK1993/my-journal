@@ -3189,8 +3189,8 @@
         const med = id ? meds.find(m => m.id === id) : null;
         document.getElementById('medModalTitle').textContent = med ? 'Edit Medication' : 'Add Medication';
         document.getElementById('medNameInput').value  = med ? med.name      : '';
-        document.getElementById('medStartInput').value = med ? med.startDate : dateToISO(START_DATE);
-        document.getElementById('medEndInput').value   = med ? med.endDate   : dateToISO(addDays(START_DATE, 280));
+        document.getElementById('medStartInput').value = med ? med.startDate : dateToISO(new Date());
+        document.getElementById('medEndInput').value   = med ? med.endDate   : dateToISO(new Date());
 
         medModalState = {
           days: new Set(med ? (med.days || ALL_DAYS) : ALL_DAYS),
