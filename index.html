@@ -1756,6 +1756,11 @@
             <span style="color:var(--text-secondary);font-size:0.8rem">which visit / test / scan</span>
           </div>
         </div>
+        <div class="modal-field" id="apptTimeRow" style="display:none">
+          <label class="modal-label">Time <span style="color:var(--text-secondary);font-size:0.75rem">(optional)</span></label>
+          <input type="time" id="apptTimeInput"
+            style="padding:8px 12px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:0.95rem;width:160px" />
+        </div>
         <div class="modal-field">
           <label class="modal-label">Cost</label>
           <div class="modal-cost-wrap">
@@ -2085,7 +2090,10 @@
         const v = document.getElementById('modalTagSelect').value;
         document.getElementById('newTagRow').classList.toggle('visible', v === '__new__');
         if (v === '__new__') document.getElementById('newTagInput').focus();
-        updateVisitNumForTag(v === '__new__' ? '' : v);
+        const tag = v === '__new__' ? '' : v;
+        updateVisitNumForTag(tag);
+        const timeRow = document.getElementById('apptTimeRow');
+        if (timeRow) timeRow.style.display = isApptTag(tag) ? 'block' : 'none';
       }
 
       function confirmNewTag() {
@@ -2102,9 +2110,9 @@
 
       // ── NOTES PERSISTENCE ──
       function migrateNote(v) {
-        if (!v) return { text:'', tag:'', cost:'', visitNum:null };
-        if (typeof v === 'string') return { text:v, tag:'', cost:'', visitNum:null };
-        return { text: v.text||'', tag: v.tag||'', cost: v.cost||'', visitNum: v.visitNum||null };
+        if (!v) return { text:'', tag:'', cost:'', visitNum:null, apptTime:'' };
+        if (typeof v === 'string') return { text:v, tag:'', cost:'', visitNum:null, apptTime:'' };
+        return { text: v.text||'', tag: v.tag||'', cost: v.cost||'', visitNum: v.visitNum||null, apptTime: v.apptTime||'' };
       }
 
       function loadLocalNotes() {
@@ -2130,10 +2138,11 @@
 
       function cacheNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 
-      function fbSave(iso, text, tag, cost, visitNum) {
+      function fbSave(iso, text, tag, cost, visitNum, apptTime) {
         db.collection(FIRESTORE_COLLECTION).doc(iso).set({
           text, tag: tag||'', cost: cost||'', date: iso,
           visitNum: visitNum || null,
+          apptTime: apptTime || '',
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }).catch(e => console.warn('Firestore save failed:', e));
       }
@@ -2363,7 +2372,7 @@
             <svg class="icon" style="color:var(--cyan);flex-shrink:0"><use href="#i-calendar"/></svg>
             <span class="appt-banner-when ${cls}">${label}</span>
             <span class="appt-banner-date">${isoToDisplay(iso)}</span>
-            <span class="appt-banner-text">${escapeHtml(n.text)}</span>
+            <span class="appt-banner-text">Appointment${n.apptTime ? ' · ' + n.apptTime : ''}</span>
           </div>`;
         }).join('');
       }
@@ -3166,8 +3175,20 @@
         document.getElementById('detailCost').innerHTML = costBadgeHtml(n.cost);
 
         const body = document.getElementById('detailBody');
-        if (n.text) { body.textContent = n.text; body.classList.remove('empty'); }
-        else        { body.textContent = 'No note text.'; body.classList.add('empty'); }
+        let bodyHtml = '';
+        if (n.apptTime && isApptTag(n.tag)) {
+          bodyHtml += `<div style="color:var(--cyan);font-size:0.8rem;margin-bottom:8px;display:flex;align-items:center;gap:6px"><svg class="icon" style="width:13px;height:13px"><use href="#i-clock"/></svg> ${escapeHtml(n.apptTime)}</div>`;
+        }
+        if (n.text) {
+          body.innerHTML = bodyHtml + `<span>${escapeHtml(n.text)}</span>`;
+          body.classList.remove('empty');
+        } else if (bodyHtml) {
+          body.innerHTML = bodyHtml;
+          body.classList.remove('empty');
+        } else {
+          body.textContent = 'No note text.';
+          body.classList.add('empty');
+        }
 
         document.getElementById('detailBackdrop').classList.add('open');
       }
@@ -3217,6 +3238,13 @@
           document.getElementById('visitNumRow').style.display = 'none';
           document.getElementById('modalVisitNum').value = '';
         }
+        // Appointment time field
+        const timeRow = document.getElementById('apptTimeRow');
+        const timeInput = document.getElementById('apptTimeInput');
+        if (timeRow && timeInput) {
+          timeRow.style.display = isApptTag(tag) ? 'block' : 'none';
+          timeInput.value = (n && n.apptTime) ? n.apptTime : '';
+        }
         document.getElementById('modalBackdrop').classList.add('open');
         document.getElementById('modalTextarea').focus();
       }
@@ -3237,6 +3265,7 @@
         const cost   = document.getElementById('modalCostInput').value.trim();
         const visitNumRaw = parseInt(document.getElementById('modalVisitNum').value, 10);
         const visitNum = tag && !isNaN(visitNumRaw) && visitNumRaw >= 1 ? visitNumRaw : null;
+        const apptTime = isApptTag(tag) ? (document.getElementById('apptTimeInput').value || '') : '';
         if (!modalDate) return;
 
         const saveIso = document.getElementById('modalDateInput').value || modalDate;
@@ -3247,8 +3276,8 @@
         }
 
         if (text || cost) {
-          notes[saveIso] = { text, tag, cost, visitNum };
-          fbSave(saveIso, text, tag, cost, visitNum);
+          notes[saveIso] = { text, tag, cost, visitNum, apptTime };
+          fbSave(saveIso, text, tag, cost, visitNum, apptTime);
         } else {
           delete notes[saveIso];
           fbDelete(saveIso);
