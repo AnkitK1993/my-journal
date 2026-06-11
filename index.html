@@ -2309,12 +2309,13 @@
       }
 
       const APPT_TAG = 'DOC';
+      const isApptTag = t => t?.toLowerCase() === APPT_TAG.toLowerCase();
 
       function renderApptsPage(c) {
         const today = new Date(); today.setHours(0,0,0,0);
         const todayISO = dateToISO(today);
         const upcoming = Object.entries(notes)
-          .filter(([iso, n]) => n.tag === APPT_TAG && iso >= todayISO)
+          .filter(([iso, n]) => isApptTag(n.tag) && iso >= todayISO)
           .sort((a,b) => a[0].localeCompare(b[0]));
 
         const items = upcoming.length === 0
@@ -2348,7 +2349,7 @@
         const d2 = dateToISO(addDays(today, 2));
 
         const hits = Object.entries(notes)
-          .filter(([iso, n]) => n.tag === APPT_TAG && (iso === todayISO || iso === d1 || iso === d2))
+          .filter(([iso, n]) => isApptTag(n.tag) && (iso === todayISO || iso === d1 || iso === d2))
           .sort((a, b) => a[0].localeCompare(b[0]));
 
         if (!hits.length) { banner.style.display = 'none'; return; }
@@ -3282,6 +3283,7 @@
         buildMonthDropdown();
         renderCalendar();
         renderNotesList();
+        updateApptBanner();
         updateNavActive();
 
         await loadNotes();
