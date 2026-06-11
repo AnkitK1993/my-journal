@@ -7,7 +7,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1998,13 +1997,6 @@
         appId:             '1:163852344797:web:c5e3f1e89b088463086a34',
         measurementId:     'G-TR3P2EQHQW',
       };
-      const EMAILJS_CONFIG = {
-        publicKey:  'YOUR_PUBLIC_KEY',
-        serviceId:  'YOUR_SERVICE_ID',
-        templateId: 'YOUR_TEMPLATE_ID',
-      };
-      const REMINDER_RECIPIENTS  = ['ankit.konchady@gmail.com', 'schavan0507@gmail.com'];
-      const REMINDER_SENT_KEY    = 'pregnancyReminderSentDate';
       const FIRESTORE_COLLECTION = 'pregnancy-notes';
       const MILESTONE_DATES_KEY  = 'milestoneDates';
       const MILESTONES_KEY       = 'journalMilestones';
@@ -2021,7 +2013,6 @@
       ];
       firebase.initializeApp(FIREBASE_CONFIG);
       const db = firebase.firestore();
-      emailjs.init(EMAILJS_CONFIG.publicKey);
 
       // ── STATE ──
       // notes[iso] = { text: string, tag: string, cost: string, visitNum: number|null }
@@ -2224,24 +2215,6 @@
       function fbDelete(iso) {
         db.collection(FIRESTORE_COLLECTION).doc(iso).delete()
           .catch(e => console.warn('Firestore delete failed:', e));
-      }
-
-      // ── EMAIL REMINDERS ──
-      async function checkAndSendReminders() {
-        const today = new Date(); today.setHours(0,0,0,0);
-        const todayISO = dateToISO(today);
-        if (localStorage.getItem(REMINDER_SENT_KEY) === todayISO) return;
-        const target = addDays(today, 2);
-        const targetISO = dateToISO(target);
-        if (notes[targetISO]) {
-          const sends = REMINDER_RECIPIENTS.map(email =>
-            emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
-              to_email: email, note_date: isoToDisplay(targetISO), note_text: notes[targetISO].text,
-            })
-          );
-          try { await Promise.all(sends); localStorage.setItem(REMINDER_SENT_KEY, todayISO); }
-          catch(e) { console.warn('EmailJS failed:', e); }
-        }
       }
 
       // ── NAV ROUTING ──
@@ -3611,8 +3584,6 @@
         // Check med alerts immediately, then every minute
         checkMedAlerts();
         medAlertInterval = setInterval(checkMedAlerts, 60000);
-
-        await checkAndSendReminders();
       }
 
       init();
