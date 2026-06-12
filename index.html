@@ -128,7 +128,12 @@
         top: 0;
         z-index: 200;
         box-shadow: 0 0 20px rgba(0,255,157,0.06);
+        overflow-x: auto;
+        overflow-y: visible;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
+      .top-nav::-webkit-scrollbar { display: none; }
       .top-nav-inner {
         max-width: 1400px;
         margin: 0 auto;
