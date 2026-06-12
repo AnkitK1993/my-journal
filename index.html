@@ -1539,6 +1539,87 @@
       .med-banner-slot { font-size: 0.64rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
       .med-banner-time { font-size: 0.62rem; color: var(--text-secondary); white-space: nowrap; flex: 1; }
 
+      /* ── AUTH GATE ── */
+      #authGate {
+        position: fixed;
+        inset: 0;
+        background: var(--bg-primary);
+        z-index: 5000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      #authGate.hidden { display: none; }
+      .auth-card {
+        position: relative;
+        background: var(--bg-container);
+        border: 1px solid var(--accent);
+        border-radius: 3px;
+        padding: 36px 32px;
+        width: 100%;
+        max-width: 380px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        box-shadow: 0 0 40px rgba(0,255,157,0.15);
+      }
+      .auth-card::before {
+        content: '';
+        position: absolute;
+        top: -1px; left: -1px;
+        width: 16px; height: 16px;
+        border-top: 2px solid var(--accent);
+        border-left: 2px solid var(--accent);
+      }
+      .auth-card::after {
+        content: '';
+        position: absolute;
+        bottom: -1px; right: -1px;
+        width: 16px; height: 16px;
+        border-bottom: 2px solid var(--accent);
+        border-right: 2px solid var(--accent);
+      }
+      .auth-title {
+        font-family: var(--display);
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--accent);
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        text-shadow: 0 0 16px var(--accent-dim);
+      }
+      .auth-msg {
+        font-size: 0.74rem;
+        color: var(--text-secondary);
+        letter-spacing: 0.5px;
+        line-height: 1.7;
+        word-break: break-word;
+      }
+      .auth-msg.denied { color: var(--delete-color); }
+      .header-signout {
+        position: absolute;
+        top: 14px; right: 16px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 2px;
+        color: var(--text-secondary);
+        font-family: var(--mono);
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 5px 10px;
+        cursor: pointer;
+        transition: border-color 0.15s, color 0.15s;
+      }
+      .header-signout:hover { border-color: var(--delete-color); color: var(--delete-color); }
+      header { position: relative; }
+
       /* ── ACCESSIBILITY: kill all motion if user prefers ── */
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -1582,9 +1663,22 @@
       </defs>
     </svg>
 
+    <!-- AUTH GATE — covers the app until an allowlisted account signs in -->
+    <div id="authGate">
+      <div class="auth-card">
+        <div class="auth-title">MY//JOURNAL</div>
+        <div class="auth-msg" id="authMsg">Checking access…</div>
+        <button class="btn" id="authSignInBtn" style="display:none" onclick="signIn()">Sign in with Google</button>
+        <button class="btn btn-cancel" id="authSignOutBtn" style="display:none" onclick="signOutUser()">Sign out</button>
+      </div>
+    </div>
+
     <header>
       <h1><svg class="icon"><use href="#i-terminal"/></svg> MY//JOURNAL <span class="ver" onclick="cycleTheme()" title="Change theme">v2.0</span></h1>
       <p>Personal tracker · Since 2026.05.05</p>
+      <button class="header-signout" onclick="signOutUser()" title="Sign out">
+        <svg class="icon" style="width:11px;height:11px"><use href="#i-x"/></svg> Sign out
+      </button>
     </header>
 
     <!-- TOP NAV -->
@@ -1892,6 +1986,7 @@
 
     <!-- SDKs at end of body: HTML/CSS paint immediately, scripts fetched in parallel by the preload scanner -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <script>
@@ -3599,6 +3694,68 @@
         document.hidden ? stopMedTicker() : startMedTicker();
       });
 
+      // ── AUTH ──
+      // Client-side allowlist mirrors the Firestore security rules; the rules are
+      // the real enforcement — this gate is the matching UX.
+      const ALLOWED_EMAILS = ['ankit.konchady@gmail.com', 'schavan0507@gmail.com'];
+      let dataSubscribed = false;
+
+      function isAllowedUser(user) {
+        return !!user && user.emailVerified &&
+          ALLOWED_EMAILS.includes((user.email || '').toLowerCase());
+      }
+
+      function signIn() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider).catch(e => {
+          // popup blocked or unsupported (common on mobile) — fall back to redirect
+          if (e && (e.code === 'auth/popup-blocked' ||
+                    e.code === 'auth/cancelled-popup-request' ||
+                    e.code === 'auth/operation-not-supported-in-this-environment')) {
+            firebase.auth().signInWithRedirect(provider);
+          } else if (e && e.code !== 'auth/popup-closed-by-user') {
+            setAuthGate('signedOut', 'Sign-in failed. Please try again.');
+          }
+        });
+      }
+
+      function signOutUser() {
+        firebase.auth().signOut().catch(e => console.warn('Sign-out failed:', e));
+      }
+
+      function setAuthGate(state, msg) {
+        const gate   = document.getElementById('authGate');
+        const msgEl  = document.getElementById('authMsg');
+        const inBtn  = document.getElementById('authSignInBtn');
+        const outBtn = document.getElementById('authSignOutBtn');
+        if (state === 'allowed') { gate.classList.add('hidden'); return; }
+        gate.classList.remove('hidden');
+        msgEl.textContent = msg;
+        msgEl.classList.toggle('denied', state === 'denied');
+        inBtn.style.display  = state === 'signedOut' ? '' : 'none';
+        outBtn.style.display = state === 'denied'    ? '' : 'none';
+      }
+
+      function initAuth() {
+        firebase.auth().onAuthStateChanged(user => {
+          if (!user) {
+            setAuthGate('signedOut', 'Sign in to access your journal.');
+          } else if (!isAllowedUser(user)) {
+            setAuthGate('denied', `${user.email || 'This account'} does not have access to this journal.`);
+          } else {
+            setAuthGate('allowed');
+            // start Firestore listeners exactly once, only for an allowed account
+            if (!dataSubscribed) {
+              dataSubscribed = true;
+              persistenceReady.then(() => {
+                subscribeNotes();
+                subscribeMeds();
+              });
+            }
+          }
+        });
+      }
+
       // ── INIT ──
       // First paint comes entirely from the localStorage cache — zero network on
       // the critical path. Firestore listeners then stream deltas in the background.
@@ -3617,10 +3774,7 @@
         updateNavActive();
         document.getElementById('calendarArea').addEventListener('click', onCalendarClick);
 
-        persistenceReady.then(() => {
-          subscribeNotes();
-          subscribeMeds();
-        });
+        initAuth();
         startMedTicker();
       }
 
