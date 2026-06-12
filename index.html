@@ -1620,6 +1620,51 @@
       .header-signout:hover { border-color: var(--delete-color); color: var(--delete-color); }
       header { position: relative; }
 
+      /* ── DATA PAGE (export / import) ── */
+      .data-section {
+        background: var(--bg-section);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 22px 20px 20px;
+        margin-bottom: 16px;
+      }
+      .data-section-title {
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+      }
+      .data-section-desc {
+        font-size: 0.74rem;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+        line-height: 1.6;
+      }
+      .data-action-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .data-status {
+        font-size: 0.7rem;
+        padding: 10px 14px;
+        border-radius: 2px;
+        margin-top: 12px;
+        display: none;
+      }
+      .data-status.ok  { background: rgba(0,255,157,0.07); border: 1px solid var(--accent-dim); color: var(--accent); }
+      .data-status.err { background: rgba(255,77,77,0.07);  border: 1px solid #ff4d4d55; color: var(--delete-color); }
+      .data-status.info { background: rgba(0,212,255,0.07); border: 1px solid rgba(0,212,255,0.3); color: var(--cyan); }
+      .data-progress {
+        font-size: 0.68rem;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        display: none;
+      }
+
       /* ── ACCESSIBILITY: kill all motion if user prefers ── */
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -1660,6 +1705,8 @@
         <g id="i-x"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></g>
         <g id="i-pill"><rect x="7" y="2" width="10" height="20" rx="5"/><line x1="7" y1="12" x2="17" y2="12"/></g>
         <g id="i-chev-d"><polyline points="6 9 12 15 18 9"/></g>
+        <g id="i-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></g>
+        <g id="i-database"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></g>
       </defs>
     </svg>
 
@@ -1711,6 +1758,9 @@
             <button class="nav-dropdown-item" id="navAppointments" onclick="navigateTo('appointments')"><svg class="icon"><use href="#i-calendar"/></svg> Appointments</button>
           </div>
         </div>
+        <button class="nav-tab" id="navData" onclick="navigateTo('data')">
+          <svg class="icon"><use href="#i-database"/></svg> Data
+        </button>
       </div>
     </nav>
 
@@ -2341,6 +2391,7 @@
         tags:         { title: 'Tags',               navId: 'navTags' },
         dates:        { title: 'Important Dates',    navId: 'navDates' },
         appointments: { title: 'Appointments',       navId: 'navAppointments' },
+        data:         { title: 'Data',               navId: 'navData' },
       };
 
       function navigateTo(page) {
@@ -2364,6 +2415,7 @@
           else if (page === 'appointments') renderApptsPage(c);
           else if (page === 'tags')    renderTagsPage(c);
           else if (page === 'history') renderHistoryPage(c);
+          else if (page === 'data')    renderDataPage(c);
         }
         updateNavActive();
         updateMedBanner();
@@ -3754,6 +3806,181 @@
             }
           }
         });
+      }
+
+      // ── DATA PAGE ──
+      function renderDataPage(c) {
+        c.innerHTML = `
+          <div class="data-section">
+            <div class="data-section-title">Export</div>
+            <div class="data-section-desc">
+              Download all your data (notes, medications, milestones, tags) as a single JSON file.
+              Use this before migrating to a new Firebase project.
+            </div>
+            <div class="data-action-row">
+              <button class="btn" id="exportBtn" onclick="exportData()">
+                <svg class="icon" style="width:13px;height:13px"><use href="#i-download"/></svg> Export Data
+              </button>
+            </div>
+            <div class="data-status" id="exportStatus"></div>
+          </div>
+
+          <div class="data-section">
+            <div class="data-section-title">Import</div>
+            <div class="data-section-desc">
+              Restore data from a previously exported JSON file. This will
+              <strong style="color:var(--delete-color)">overwrite</strong> all existing notes,
+              medications, milestones, and tags in the current project.
+            </div>
+            <div class="data-action-row">
+              <button class="btn" onclick="document.getElementById('importFileInput').click()">
+                <svg class="icon" style="width:13px;height:13px"><use href="#i-upload"/></svg> Choose File &amp; Import
+              </button>
+              <input type="file" id="importFileInput" accept=".json,application/json"
+                style="display:none" onchange="importData(this.files[0])">
+            </div>
+            <div class="data-progress" id="importProgress"></div>
+            <div class="data-status" id="importStatus"></div>
+          </div>`;
+      }
+
+      async function exportData() {
+        const btn = document.getElementById('exportBtn');
+        const statusEl = document.getElementById('exportStatus');
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = 'Exporting…';
+        statusEl.className = 'data-status info';
+        statusEl.textContent = 'Reading Firestore…';
+        statusEl.style.display = 'block';
+        try {
+          // Fetch fresh copies directly from Firestore (not just the in-memory cache)
+          const [notesSnap, medsListSnap, medsDoneSnap] = await Promise.all([
+            db.collection(FIRESTORE_COLLECTION).get(),
+            db.collection(MEDS_COLLECTION).doc('list').get(),
+            db.collection(MEDS_COLLECTION).doc('done').get(),
+          ]);
+          const notesData = {};
+          notesSnap.forEach(doc => {
+            const d = doc.data();
+            // strip server timestamps — they won't serialize cleanly
+            delete d.updatedAt;
+            notesData[doc.id] = d;
+          });
+          const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            notes: notesData,
+            meds: medsListSnap.exists ? (medsListSnap.data().meds || []) : [],
+            medDone: medsDoneSnap.exists ? (medsDoneSnap.data().medDone || {}) : {},
+            tags: tags,
+            milestones: milestones,
+          };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `my-journal-export-${dateToISO(new Date())}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          const noteCount = Object.keys(notesData).length;
+          statusEl.className = 'data-status ok';
+          statusEl.textContent = `Exported ${noteCount} note${noteCount !== 1 ? 's' : ''}, ${payload.meds.length} med${payload.meds.length !== 1 ? 's' : ''}, ${payload.milestones.length} milestone${payload.milestones.length !== 1 ? 's' : ''}.`;
+        } catch (e) {
+          statusEl.className = 'data-status err';
+          statusEl.textContent = 'Export failed: ' + e.message;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<svg class="icon" style="width:13px;height:13px"><use href="#i-download"/></svg> Export Data';
+        }
+      }
+
+      async function importData(file) {
+        if (!file) return;
+        const progressEl = document.getElementById('importProgress');
+        const statusEl   = document.getElementById('importStatus');
+        progressEl.style.display = 'block';
+        statusEl.style.display   = 'none';
+        progressEl.textContent = 'Reading file…';
+        let payload;
+        try {
+          payload = JSON.parse(await file.text());
+        } catch {
+          progressEl.style.display = 'none';
+          statusEl.className = 'data-status err';
+          statusEl.textContent = 'Invalid file — could not parse JSON.';
+          statusEl.style.display = 'block';
+          document.getElementById('importFileInput').value = '';
+          return;
+        }
+        if (!payload.version || !payload.notes) {
+          progressEl.style.display = 'none';
+          statusEl.className = 'data-status err';
+          statusEl.textContent = 'Unrecognised file format. Please use a file exported from this app.';
+          statusEl.style.display = 'block';
+          document.getElementById('importFileInput').value = '';
+          return;
+        }
+        try {
+          // ── Notes (batch write, max 500 per batch) ──
+          const noteEntries = Object.entries(payload.notes || {});
+          progressEl.textContent = `Importing ${noteEntries.length} notes…`;
+          const BATCH_SIZE = 400;
+          for (let i = 0; i < noteEntries.length; i += BATCH_SIZE) {
+            const chunk = noteEntries.slice(i, i + BATCH_SIZE);
+            const batch = db.batch();
+            chunk.forEach(([iso, note]) => {
+              const ref = db.collection(FIRESTORE_COLLECTION).doc(iso);
+              batch.set(ref, {
+                text:      note.text      || '',
+                tag:       note.tag       || '',
+                cost:      note.cost      || '',
+                visitNum:  note.visitNum  || null,
+                apptTime:  note.apptTime  || '',
+                date:      iso,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              });
+            });
+            await batch.commit();
+            progressEl.textContent = `Imported notes ${Math.min(i + BATCH_SIZE, noteEntries.length)} / ${noteEntries.length}…`;
+          }
+
+          // ── Meds ──
+          progressEl.textContent = 'Importing medications…';
+          await db.collection(MEDS_COLLECTION).doc('list').set({
+            meds:      payload.meds    || [],
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          await db.collection(MEDS_COLLECTION).doc('done').set({
+            medDone:   payload.medDone || {},
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+
+          // ── Tags & Milestones (localStorage) ──
+          progressEl.textContent = 'Restoring tags and milestones…';
+          if (Array.isArray(payload.tags) && payload.tags.length) {
+            tags = payload.tags;
+            saveTags();
+          }
+          if (Array.isArray(payload.milestones) && payload.milestones.length) {
+            milestones = payload.milestones;
+            saveMilestones();
+          }
+
+          progressEl.style.display = 'none';
+          statusEl.className = 'data-status ok';
+          statusEl.textContent = `Import complete — ${noteEntries.length} note${noteEntries.length !== 1 ? 's' : ''}, ${(payload.meds || []).length} med${(payload.meds || []).length !== 1 ? 's' : ''}, ${(payload.milestones || []).length} milestone${(payload.milestones || []).length !== 1 ? 's' : ''} restored. Reload the page to see your data.`;
+          statusEl.style.display = 'block';
+        } catch (e) {
+          progressEl.style.display = 'none';
+          statusEl.className = 'data-status err';
+          statusEl.textContent = 'Import failed: ' + e.message;
+          statusEl.style.display = 'block';
+        } finally {
+          document.getElementById('importFileInput').value = '';
+        }
       }
 
       // ── INIT ──
