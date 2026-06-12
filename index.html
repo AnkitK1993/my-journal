@@ -2624,7 +2624,7 @@
             <svg class="icon" style="color:var(--cyan);flex-shrink:0"><use href="#i-calendar"/></svg>
             <span class="appt-banner-when ${cls}">${label}</span>
             <span class="appt-banner-date">${isoToDisplay(iso)}</span>
-            <span class="appt-banner-text">${escapeHtml(n.tag || 'Appointment')}${n.apptTime ? ' · ' + n.apptTime : ''}${n.text ? ' · ' + escapeHtml(n.text.slice(0, 40)) : ''}</span>
+            <span class="appt-banner-text">${escapeHtml(n.tag || 'Appointment')}${n.apptTime ? ' · ' + n.apptTime : ''}</span>
           </div>`;
         }).join('');
       }
