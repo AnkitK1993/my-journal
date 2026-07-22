@@ -130,12 +130,14 @@
         top: 0;
         z-index: 200;
         box-shadow: 0 0 20px rgba(0,255,157,0.06);
+      }
+      .top-nav-scroll {
         overflow-x: auto;
         overflow-y: visible;
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-      .top-nav::-webkit-scrollbar { display: none; }
+      .top-nav-scroll::-webkit-scrollbar { display: none; }
       .top-nav-inner {
         max-width: 1400px;
         margin: 0 auto;
@@ -1259,7 +1261,7 @@
         display: none; flex-direction: column;
         box-shadow: 0 12px 32px rgba(0,0,0,0.6);
       }
-      .nav-group.open > .nav-dropdown { display: flex; animation: drawerIn 0.18s ease both; }
+      .nav-dropdown.open { display: flex; animation: drawerIn 0.18s ease both; }
       .nav-dropdown-item {
         display: flex; align-items: center; gap: 9px;
         background: none; border: none;
@@ -1743,37 +1745,43 @@
 
     <!-- TOP NAV -->
     <nav class="top-nav" onclick="handleNavClick(event)">
-      <div class="top-nav-inner">
-        <button class="nav-tab nav-home" id="navHome" onclick="navigateTo('home')" title="Home">
-          <svg class="icon"><use href="#i-home"/></svg>
-        </button>
-        <button class="nav-tab" id="navMeds" onclick="navigateTo('meds')">
-          <svg class="icon"><use href="#i-pill"/></svg> Meds
-        </button>
-        <div class="nav-group" id="navGroupJournal">
-          <button class="nav-tab nav-group-btn" onclick="toggleNavDropdown('journal')">
-            <svg class="icon"><use href="#i-edit"/></svg> Journal
-            <svg class="icon nav-caret" style="width:9px;height:9px"><use href="#i-chev-d"/></svg>
+      <!-- Scrollable wrapper contains only the buttons, NOT the dropdowns.
+           Keeping dropdowns outside overflow:auto avoids an iOS Safari bug
+           where fixed-position children of overflow containers lose pointer events. -->
+      <div class="top-nav-scroll">
+        <div class="top-nav-inner">
+          <button class="nav-tab nav-home" id="navHome" onclick="navigateTo('home')" title="Home">
+            <svg class="icon"><use href="#i-home"/></svg>
           </button>
-          <div class="nav-dropdown" id="navdrop-journal">
-            <button class="nav-dropdown-item" id="navNotes"   onclick="navigateTo('notes')"><svg class="icon"><use href="#i-edit"/></svg> Notes</button>
-            <button class="nav-dropdown-item" id="navHistory" onclick="navigateTo('history')"><svg class="icon"><use href="#i-list"/></svg> History</button>
-            <button class="nav-dropdown-item" id="navTags"    onclick="navigateTo('tags')"><svg class="icon"><use href="#i-tag"/></svg> Tags</button>
-          </div>
-        </div>
-        <div class="nav-group" id="navGroupTracker">
-          <button class="nav-tab nav-group-btn" onclick="toggleNavDropdown('tracker')">
-            <svg class="icon"><use href="#i-calendar"/></svg> Tracker
-            <svg class="icon nav-caret" style="width:9px;height:9px"><use href="#i-chev-d"/></svg>
+          <button class="nav-tab" id="navMeds" onclick="navigateTo('meds')">
+            <svg class="icon"><use href="#i-pill"/></svg> Meds
           </button>
-          <div class="nav-dropdown" id="navdrop-tracker">
-            <button class="nav-dropdown-item" id="navDates"        onclick="navigateTo('dates')"><svg class="icon"><use href="#i-star"/></svg> Important Dates</button>
-            <button class="nav-dropdown-item" id="navAppointments" onclick="navigateTo('appointments')"><svg class="icon"><use href="#i-calendar"/></svg> Appointments</button>
+          <div class="nav-group" id="navGroupJournal">
+            <button class="nav-tab nav-group-btn" onclick="toggleNavDropdown('journal')">
+              <svg class="icon"><use href="#i-edit"/></svg> Journal
+              <svg class="icon nav-caret" style="width:9px;height:9px"><use href="#i-chev-d"/></svg>
+            </button>
           </div>
+          <div class="nav-group" id="navGroupTracker">
+            <button class="nav-tab nav-group-btn" onclick="toggleNavDropdown('tracker')">
+              <svg class="icon"><use href="#i-calendar"/></svg> Tracker
+              <svg class="icon nav-caret" style="width:9px;height:9px"><use href="#i-chev-d"/></svg>
+            </button>
+          </div>
+          <button class="nav-tab" id="navData" onclick="navigateTo('data')">
+            <svg class="icon"><use href="#i-database"/></svg> Data
+          </button>
         </div>
-        <button class="nav-tab" id="navData" onclick="navigateTo('data')">
-          <svg class="icon"><use href="#i-database"/></svg> Data
-        </button>
+      </div>
+      <!-- Dropdowns live outside the scrollable container so overflow:auto never clips them -->
+      <div class="nav-dropdown" id="navdrop-journal">
+        <button class="nav-dropdown-item" id="navNotes"   onclick="navigateTo('notes')"><svg class="icon"><use href="#i-edit"/></svg> Notes</button>
+        <button class="nav-dropdown-item" id="navHistory" onclick="navigateTo('history')"><svg class="icon"><use href="#i-list"/></svg> History</button>
+        <button class="nav-dropdown-item" id="navTags"    onclick="navigateTo('tags')"><svg class="icon"><use href="#i-tag"/></svg> Tags</button>
+      </div>
+      <div class="nav-dropdown" id="navdrop-tracker">
+        <button class="nav-dropdown-item" id="navDates"        onclick="navigateTo('dates')"><svg class="icon"><use href="#i-star"/></svg> Important Dates</button>
+        <button class="nav-dropdown-item" id="navAppointments" onclick="navigateTo('appointments')"><svg class="icon"><use href="#i-calendar"/></svg> Appointments</button>
       </div>
     </nav>
 
@@ -2467,25 +2475,25 @@
       }
 
       function toggleNavDropdown(group) {
-        const el = document.getElementById('navGroup' + group.charAt(0).toUpperCase() + group.slice(1));
-        if (!el) return;
-        const isOpen = el.classList.contains('open');
+        const navGroupEl = document.getElementById('navGroup' + group.charAt(0).toUpperCase() + group.slice(1));
+        const dropdown   = document.getElementById('navdrop-' + group);
+        if (!navGroupEl || !dropdown) return;
+        const isOpen = dropdown.classList.contains('open');
         closeAllNavDropdowns();
         if (!isOpen) {
-          el.classList.add('open');
-          // Position dropdown using fixed coords so it never causes page overflow
-          const btn = el.querySelector('.nav-group-btn');
+          navGroupEl.classList.add('open'); // rotates the caret
+          const btn  = navGroupEl.querySelector('.nav-group-btn');
           const rect = btn.getBoundingClientRect();
-          const dropdown = el.querySelector('.nav-dropdown');
-          dropdown.style.top = rect.bottom + 'px';
-          // Clamp left so the dropdown stays within the viewport
+          dropdown.style.top  = rect.bottom + 'px';
           const dropW = dropdown.offsetWidth || 190;
           const left  = Math.min(rect.left, window.innerWidth - dropW - 8);
           dropdown.style.left = Math.max(8, left) + 'px';
+          dropdown.classList.add('open');
         }
       }
 
       function closeAllNavDropdowns() {
+        document.querySelectorAll('.nav-dropdown.open').forEach(d => d.classList.remove('open'));
         document.querySelectorAll('.nav-group.open').forEach(g => g.classList.remove('open'));
       }
 
