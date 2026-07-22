@@ -1053,6 +1053,8 @@
       .btn-icon:active { transform: scale(0.95); }
       .btn-icon.btn-del { color: var(--delete-color); border-color: rgba(255,77,77,0.4); }
       .btn-icon.btn-del:hover { background: rgba(255,77,77,0.08); border-color: var(--delete-color); color: var(--delete-color); box-shadow: 0 0 10px rgba(255,77,77,0.12); }
+      .btn-icon.btn-banner-on { color: var(--accent); border-color: var(--accent-dim); background: var(--accent-faint); }
+      .btn-icon.btn-banner-on:hover { box-shadow: 0 0 10px var(--accent-dim); }
 
       /* ── UNDO TOAST ── */
       .undo-toast {
@@ -2137,6 +2139,7 @@
       const TOTAL_WEEKS  = 40;
       const STORAGE_KEY  = 'journalNotes';
       const TAGS_KEY     = 'journalTags';
+      const BANNER_TAGS_KEY = 'journalBannerTags';
       const MONTH_NAMES  = ['January','February','March','April','May','June',
                             'July','August','September','October','November','December'];
       const DAY_ABBREV   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -2178,6 +2181,7 @@
       // notes[iso] = { text: string, tag: string, cost: string, visitNum: number|null }
       let notes       = {};
       let tags        = [];
+      let bannerTags  = new Set(); // tag names whose notes appear in the banner
       let tagCounts   = {};
       let modalDate   = null;
       let pendingDelete            = null;
@@ -2238,6 +2242,22 @@
       function saveTags() {
         localStorage.setItem(TAGS_KEY, JSON.stringify(tags));
         rebuildTagColors();
+      }
+      function loadBannerTags() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(BANNER_TAGS_KEY));
+          bannerTags = new Set(Array.isArray(stored) ? stored : ['DOC', 'Scan']);
+        } catch { bannerTags = new Set(['DOC', 'Scan']); }
+      }
+      function saveBannerTags() {
+        localStorage.setItem(BANNER_TAGS_KEY, JSON.stringify([...bannerTags]));
+      }
+      function toggleBannerTag(tag) {
+        if (bannerTags.has(tag)) bannerTags.delete(tag);
+        else bannerTags.add(tag);
+        saveBannerTags();
+        updateApptBanner();
+        if (currentPage === 'tags') navigateTo('tags');
       }
       function tagColor(tag) { return tagColorMap.get(tag) || TAG_COLORS[0]; }
 
@@ -2544,8 +2564,7 @@
           </div>${items}`;
       }
 
-      const APPT_TAG = 'DOC';
-      const isApptTag = t => t?.toLowerCase() === APPT_TAG.toLowerCase();
+      const isApptTag = t => !!(t && bannerTags.has(t));
 
       function renderApptsPage(c) {
         const today = new Date(); today.setHours(0,0,0,0);
@@ -2554,8 +2573,9 @@
           .filter(([iso, n]) => isApptTag(n.tag) && iso >= todayISO)
           .sort((a,b) => a[0].localeCompare(b[0]));
 
+        const bannerTagList = [...bannerTags].join(', ') || 'a banner-enabled tag';
         const items = upcoming.length === 0
-          ? `<div class="page-empty">No upcoming DOC appointments.<br><span style="font-size:0.68rem;color:var(--text-secondary)">Tag a note with <strong>DOC</strong> to see it here.</span></div>`
+          ? `<div class="page-empty">No upcoming appointments.<br><span style="font-size:0.68rem;color:var(--text-secondary)">Tag a note with <strong>${escapeHtml(bannerTagList)}</strong> to see it here.</span></div>`
           : `<div class="appts-list">${upcoming.map(([iso,n]) => {
               const diff = Math.round((new Date(iso+'T00:00:00')-today)/86400000);
               const cd   = diff===0?'Today':`in ${diff} day${diff!==1?'s':''}`;
@@ -2602,7 +2622,7 @@
             <svg class="icon" style="color:var(--cyan);flex-shrink:0"><use href="#i-calendar"/></svg>
             <span class="appt-banner-when ${cls}">${label}</span>
             <span class="appt-banner-date">${isoToDisplay(iso)}</span>
-            <span class="appt-banner-text">Appointment${n.apptTime ? ' · ' + n.apptTime : ''}</span>
+            <span class="appt-banner-text">${escapeHtml(n.tag || 'Appointment')}${n.apptTime ? ' · ' + n.apptTime : ''}${n.text ? ' · ' + escapeHtml(n.text.slice(0, 40)) : ''}</span>
           </div>`;
         }).join('');
       }
@@ -2974,7 +2994,12 @@
         const items = tags.map(t => {
           const color     = tagColor(t);
           const count     = tagCounts[t] || 0;
+          const inBanner  = bannerTags.has(t);
           const isPending = tagDeletePending === t;
+          const bellBtn   = `<button class="btn-icon${inBanner ? ' btn-banner-on' : ''}"
+            onclick='toggleBannerTag(${JSON.stringify(t)})'
+            title="${inBanner ? 'Remove from upcoming banner' : 'Show in upcoming banner'}">
+            <svg class="icon"><use href="#i-bell"/></svg></button>`;
           const delBtn    = isPending
             ? `<button class="btn-icon btn-del btn-sure" onclick='executeDeleteTag(${JSON.stringify(t)})'>Sure?</button>`
             : `<button class="btn-icon btn-del" onclick='promptDeleteTag(${JSON.stringify(t)})'><svg class="icon"><use href="#i-trash"/></svg></button>`;
@@ -2982,6 +3007,7 @@
             <span class="tag-color-dot" style="background:${color}"></span>
             <span class="tag-manage-name">${escapeHtml(t)}</span>
             <span class="tag-manage-count">${count ? `${count} use${count!==1?'s':''}` : 'Unused'}</span>
+            ${bellBtn}
             <button class="btn-icon" onclick='openTagEditor(${JSON.stringify(t)})'><svg class="icon"><use href="#i-edit"/></svg></button>
             ${delBtn}
           </div>`;
@@ -3026,6 +3052,7 @@
           const idx = tags.indexOf(editingTag);
           if (idx > -1) tags[idx] = newName;
           saveTags();
+          if (bannerTags.has(editingTag)) { bannerTags.delete(editingTag); bannerTags.add(newName); saveBannerTags(); }
           // Update all notes using the old tag name
           Object.keys(notes).forEach(iso => {
             if (notes[iso].tag === editingTag) {
@@ -3058,6 +3085,7 @@
         const idx = tags.indexOf(tag);
         if (idx > -1) tags.splice(idx, 1);
         saveTags();
+        if (bannerTags.has(tag)) { bannerTags.delete(tag); saveBannerTags(); }
         Object.keys(notes).forEach(iso => {
           if (notes[iso].tag === tag) {
             notes[iso] = { ...notes[iso], tag: '', visitNum: null };
@@ -3997,6 +4025,7 @@
       function init() {
         loadTheme();
         loadTags();
+        loadBannerTags();
         loadMilestones();
         loadMeds();
         loadLocalNotes();
