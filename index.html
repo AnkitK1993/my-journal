@@ -1453,12 +1453,29 @@
       .page-empty { color: var(--text-secondary); font-size: 0.74rem; padding: 40px 20px; text-align: center; letter-spacing: 1px; }
 
       /* enhanced note indicator on calendar */
-      .note-indicator { position: absolute; bottom: 3px; right: 4px; color: var(--accent); line-height: 1; }
+      .note-indicator { position: absolute; bottom: 3px; right: 4px; color: var(--accent); line-height: 1; display:flex; align-items:center; gap:2px; }
       .note-indicator .dot {
         width: 6px; height: 6px; border-radius: 50%;
         background: var(--accent); display: inline-block;
         box-shadow: 0 0 6px var(--accent);
       }
+      .note-count {
+        font-size: 0.48rem; font-weight: 800; color: var(--bg-primary);
+        background: var(--accent); border-radius: 50%;
+        width: 12px; height: 12px; display: inline-flex;
+        align-items: center; justify-content: center; line-height: 1;
+      }
+
+      /* Day detail modal */
+      .day-detail-list { display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow-y:auto; padding:4px 0 8px; }
+      .day-detail-note {
+        border-left: 3px solid var(--border); padding: 10px 12px;
+        background: var(--bg-section); border-radius: 6px; cursor: pointer;
+        transition: background 0.15s;
+      }
+      .day-detail-note:hover { background: var(--bg-header); }
+      .day-detail-note-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      .day-detail-note-text { color:var(--text-primary); font-size:0.8rem; margin-top:6px; opacity:0.85; white-space:pre-wrap; word-break:break-word; }
 
       /* ── MODAL for meds / milestone (shared extended fields) ── */
       .modal input[type="text"],
@@ -1942,6 +1959,20 @@
       </div>
     </div>
 
+    <!-- DAY DETAIL MODAL -->
+    <div class="modal-backdrop" id="dayDetailBackdrop" onclick="handleDayDetailBackdropClick(event)">
+      <div class="detail-modal">
+        <div class="detail-header">
+          <div class="detail-date" id="dayDetailDate"></div>
+        </div>
+        <div id="dayDetailList" class="day-detail-list"></div>
+        <div class="detail-actions">
+          <button class="btn btn-cancel" onclick="closeDayDetail()">Close</button>
+          <button class="btn" onclick="addNoteForDay()">＋ Add Note</button>
+        </div>
+      </div>
+    </div>
+
     <!-- EDIT MODAL -->
     <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
       <div class="modal">
@@ -2177,15 +2208,18 @@
         .catch(() => { /* unsupported browser or another precondition — network mode still works */ });
 
       // ── STATE ──
-      // notes[iso] = { text: string, tag: string, cost: string, visitNum: number|null }
+      // notes[iso] = [{ id, text, tag, cost, visitNum, apptTime }, ...] — one array per day
       let notes       = {};
       let tags        = [];
       let bannerTags  = new Set(); // tag names whose notes appear in the banner
       let tagCounts   = {};
-      let modalDate   = null;
+      let modalDate    = null;
+      let modalNoteId  = null;   // noteId being edited; null = new note
       let pendingDelete            = null;
       let pendingDeleteTimer       = null;
-      let detailIso               = null;
+      let detailIso    = null;
+      let detailNoteId = null;   // noteId in single-note detail view
+      let dayDetailIso = null;   // iso in day-detail modal
       let milestoneDates          = {};
       let milestones              = [];
       let editingMilestone        = null; // null = add new, string id = edit existing
@@ -2261,8 +2295,10 @@
 
       function recomputeTagCounts() {
         tagCounts = {};
-        Object.values(notes).forEach(n => {
-          if (n.tag) tagCounts[n.tag] = (tagCounts[n.tag] || 0) + 1;
+        Object.values(notes).forEach(arr => {
+          arr.forEach(n => {
+            if (n.tag) tagCounts[n.tag] = (tagCounts[n.tag] || 0) + 1;
+          });
         });
       }
 
@@ -2297,10 +2333,15 @@
         sel.appendChild(np);
       }
 
-      function nextVisitNum(tag, excludeIso) {
-        const count = Object.entries(notes)
-          .filter(([k, n]) => k !== excludeIso && n.tag === tag)
-          .length;
+      function genNoteId(iso) {
+        return `${iso}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      }
+
+      function nextVisitNum(tag, excludeNoteId) {
+        let count = 0;
+        Object.values(notes).forEach(arr => {
+          arr.forEach(n => { if (n.id !== excludeNoteId && n.tag === tag) count++; });
+        });
         return count + 1;
       }
 
@@ -2323,9 +2364,10 @@
         if (!row) return;
         if (tag) {
           row.style.display = 'block';
-          const existingNote = notes[modalDate];
+          const arr = notes[modalDate] || [];
+          const existingNote = modalNoteId ? arr.find(n => n.id === modalNoteId) : null;
           const storedNum = existingNote && existingNote.tag === tag ? existingNote.visitNum : null;
-          document.getElementById('modalVisitNum').value = storedNum || nextVisitNum(tag, modalDate);
+          document.getElementById('modalVisitNum').value = storedNum || nextVisitNum(tag, modalNoteId);
           syncTagDropdownCount();
         } else {
           row.style.display = 'none';
@@ -2356,17 +2398,28 @@
       }
 
       // ── NOTES PERSISTENCE ──
-      function migrateNote(v) {
-        if (!v) return { text:'', tag:'', cost:'', visitNum:null, apptTime:'' };
-        if (typeof v === 'string') return { text:v, tag:'', cost:'', visitNum:null, apptTime:'' };
-        return { text: v.text||'', tag: v.tag||'', cost: v.cost||'', visitNum: v.visitNum||null, apptTime: v.apptTime||'' };
+      // migrateNote: normalise a Firestore doc or raw value into a note object.
+      // id = the Firestore doc ID (noteId or legacy iso string).
+      function migrateNote(v, id) {
+        if (!v) return { id: id||'', text:'', tag:'', cost:'', visitNum:null, apptTime:'' };
+        if (typeof v === 'string') return { id: id||'', text:v, tag:'', cost:'', visitNum:null, apptTime:'' };
+        return { id: id||v.id||'', text: v.text||'', tag: v.tag||'', cost: v.cost||'', visitNum: v.visitNum||null, apptTime: v.apptTime||'' };
       }
 
       function loadLocalNotes() {
         try {
           const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
           notes = {};
-          Object.keys(raw).forEach(k => { notes[k] = migrateNote(raw[k]); });
+          Object.keys(raw).forEach(k => {
+            const v = raw[k];
+            if (Array.isArray(v)) {
+              // New format: array of note objects
+              notes[k] = v.map(n => migrateNote(n, n.id || k));
+            } else {
+              // Old format: single note object — wrap with iso as noteId
+              notes[k] = [migrateNote(v, k)];
+            }
+          });
         } catch { notes = {}; }
       }
 
@@ -2374,6 +2427,7 @@
       // skip the IndexedDB-served cache snapshot entirely and only apply real server
       // deltas. This means zero server reads on load — Firestore only wakes the
       // listener when a document actually changes on the server.
+      // Each Firestore doc is one note; doc.id = noteId; doc.data().date = iso.
       function subscribeNotes() {
         let serverSeen = false;
         db.collection(FIRESTORE_COLLECTION).onSnapshot(snap => {
@@ -2382,13 +2436,29 @@
             // First server snapshot: full rebuild in case localStorage was stale
             serverSeen = true;
             notes = {};
-            snap.forEach(doc => { notes[doc.id] = migrateNote(doc.data()); });
+            snap.forEach(doc => {
+              const data = doc.data();
+              const iso  = data.date || doc.id; // legacy docs used iso as doc.id
+              if (!notes[iso]) notes[iso] = [];
+              notes[iso].push(migrateNote(data, doc.id));
+            });
           } else {
             // Subsequent snapshots: only changed documents cross the network
             snap.docChanges().forEach(ch => {
               if (ch.doc.metadata.hasPendingWrites) return; // local echo — skip
-              if (ch.type === 'removed') delete notes[ch.doc.id];
-              else notes[ch.doc.id] = migrateNote(ch.doc.data());
+              const data = ch.doc.data();
+              const iso  = data.date || ch.doc.id;
+              if (ch.type === 'removed') {
+                if (notes[iso]) {
+                  notes[iso] = notes[iso].filter(n => n.id !== ch.doc.id);
+                  if (!notes[iso].length) delete notes[iso];
+                }
+              } else {
+                if (!notes[iso]) notes[iso] = [];
+                const idx = notes[iso].findIndex(n => n.id === ch.doc.id);
+                if (idx > -1) notes[iso][idx] = migrateNote(data, ch.doc.id);
+                else notes[iso].push(migrateNote(data, ch.doc.id));
+              }
             });
           }
           cacheNotes();
@@ -2398,8 +2468,9 @@
 
       function cacheNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 
-      function fbSave(iso, text, tag, cost, visitNum, apptTime) {
-        db.collection(FIRESTORE_COLLECTION).doc(iso).set({
+      // noteId is the Firestore doc ID; iso is stored as data.date for grouping.
+      function fbSave(noteId, iso, text, tag, cost, visitNum, apptTime) {
+        db.collection(FIRESTORE_COLLECTION).doc(noteId).set({
           text, tag: tag||'', cost: cost||'', date: iso,
           visitNum: visitNum || null,
           apptTime: apptTime || '',
@@ -2407,8 +2478,8 @@
         }).catch(e => console.warn('Firestore save failed:', e));
       }
 
-      function fbDelete(iso) {
-        db.collection(FIRESTORE_COLLECTION).doc(iso).delete()
+      function fbDelete(noteId) {
+        db.collection(FIRESTORE_COLLECTION).doc(noteId).delete()
           .catch(e => console.warn('Firestore delete failed:', e));
       }
 
@@ -2530,8 +2601,12 @@
 
       function renderNotesPage(c, filterTag) {
         filterTag = filterTag || '';
-        const entries = Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0]));
-        const allTags = [...new Set(entries.map(([,n]) => n.tag).filter(Boolean))];
+        // Flatten all note arrays sorted newest-first by date
+        const flat = [];
+        Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0])).forEach(([iso, arr]) => {
+          arr.forEach(n => flat.push({ iso, n }));
+        });
+        const allTags = [...new Set(flat.map(e => e.n.tag).filter(Boolean))];
 
         const filterBtns = [
           `<button class="filter-btn${!filterTag?' active':''}" onclick="renderNotesPage(document.getElementById('pageContent'),'')">All</button>`,
@@ -2540,12 +2615,12 @@
           )
         ].join('');
 
-        const shown = filterTag ? entries.filter(([,n]) => n.tag===filterTag) : entries;
+        const shown = filterTag ? flat.filter(e => e.n.tag===filterTag) : flat;
         const items = shown.length===0
           ? `<div class="page-empty">No notes found.</div>`
-          : `<div class="notes-panel-grid">${shown.map(([iso,n]) => {
+          : `<div class="notes-panel-grid">${shown.map(({iso, n}) => {
               const bc = n.tag ? tagColor(n.tag) : 'var(--border)';
-              return `<div class="notes-panel-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}')">
+              return `<div class="notes-panel-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}','${n.id}')">
                 <div class="notes-panel-row">
                   <span class="notes-panel-date">${isoToDisplay(iso)}</span>
                   ${tagPillHtml(n.tag, n.visitNum)}
@@ -2565,17 +2640,20 @@
       function renderApptsPage(c) {
         const today = new Date(); today.setHours(0,0,0,0);
         const todayISO = dateToISO(today);
-        const upcoming = Object.entries(notes)
-          .filter(([iso, n]) => isApptTag(n.tag) && iso >= todayISO)
-          .sort((a,b) => a[0].localeCompare(b[0]));
+        const upcoming = [];
+        Object.entries(notes).forEach(([iso, arr]) => {
+          if (iso < todayISO) return;
+          arr.forEach(n => { if (isApptTag(n.tag)) upcoming.push({ iso, n }); });
+        });
+        upcoming.sort((a,b) => a.iso.localeCompare(b.iso));
 
         const bannerTagList = [...bannerTags].join(', ') || 'a banner-enabled tag';
         const items = upcoming.length === 0
           ? `<div class="page-empty">No upcoming appointments.<br><span style="font-size:0.68rem;color:var(--text-secondary)">Tag a note with <strong>${escapeHtml(bannerTagList)}</strong> to see it here.</span></div>`
-          : `<div class="appts-list">${upcoming.map(([iso,n]) => {
+          : `<div class="appts-list">${upcoming.map(({iso, n}) => {
               const diff = Math.round((new Date(iso+'T00:00:00')-today)/86400000);
               const cd   = diff===0?'Today':`in ${diff} day${diff!==1?'s':''}`;
-              return `<div class="appt-item" onclick="openNoteDetail('${iso}')">
+              return `<div class="appt-item" onclick="openNoteDetail('${iso}','${n.id}')">
                 <div class="appt-left">
                   <div class="appt-date">${isoToDisplay(iso)}</div>
                   <div class="appt-cd">${cd}</div>
@@ -2599,22 +2677,25 @@
         const todayISO   = dateToISO(today);
         const horizonISO = dateToISO(addDays(today, 3));
 
-        const upcoming = Object.entries(notes)
-          .filter(([iso, n]) => isApptTag(n.tag) && iso >= todayISO)
-          .sort((a, b) => a[0].localeCompare(b[0]));
+        const upcoming = [];
+        Object.entries(notes).forEach(([iso, arr]) => {
+          if (iso < todayISO) return;
+          arr.forEach(n => { if (isApptTag(n.tag)) upcoming.push({ iso, n }); });
+        });
+        upcoming.sort((a, b) => a.iso.localeCompare(b.iso));
 
         // today + next 3 days; if empty, fall back to the next upcoming appointment
-        let hits = upcoming.filter(([iso]) => iso <= horizonISO);
+        let hits = upcoming.filter(e => e.iso <= horizonISO);
         if (!hits.length) hits = upcoming.slice(0, 1);
 
         if (!hits.length) { banner.style.display = 'none'; return; }
 
         banner.style.display = 'block';
-        content.innerHTML = hits.map(([iso, n]) => {
+        content.innerHTML = hits.map(({ iso, n }) => {
           const diff = Math.round((new Date(iso+'T00:00:00') - today) / 86400000);
           const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `In ${diff} days`;
           const cls   = diff === 0 ? 'today' : diff <= 3 ? 'soon' : 'upcoming';
-          return `<div class="appt-banner-row" onclick="openNoteDetail('${iso}')">
+          return `<div class="appt-banner-row" onclick="openNoteDetail('${iso}','${n.id}')">
             <svg class="icon" style="color:var(--cyan);flex-shrink:0"><use href="#i-calendar"/></svg>
             <span class="appt-banner-when ${cls}">${label}</span>
             <span class="appt-banner-date">${isoToDisplay(iso)}</span>
@@ -2740,9 +2821,12 @@
             }
 
             const iso=dateToISO(cd);
-            if (notes[iso]) {
+            if (notes[iso] && notes[iso].length) {
               const ind=document.createElement('div'); ind.className='note-indicator';
-              ind.innerHTML='<span class="dot"></span>';
+              const cnt = notes[iso].length;
+              ind.innerHTML = cnt > 1
+                ? `<span class="dot"></span><span class="note-count">${cnt}</span>`
+                : '<span class="dot"></span>';
               cell.appendChild(ind);
             }
 
@@ -2762,7 +2846,7 @@
         if (!cell || !cell.dataset.iso) return;
         spawnRipple(e, cell);
         const iso = cell.dataset.iso;
-        notes[iso] ? openNoteDetail(iso) : openModal(iso);
+        (notes[iso] && notes[iso].length) ? openDayDetail(iso) : openModal(iso, null);
       }
 
       // ── PROGRESS ──
@@ -2817,21 +2901,26 @@
         else if (currentPage === 'history') renderHistoryPage(c);
       }
 
-      function deleteNote(iso) {
+      function deleteNote(iso, noteId) {
         if (pendingDelete) {
           clearTimeout(pendingDeleteTimer);
-          fbDelete(pendingDelete.iso);
+          fbDelete(pendingDelete.noteId);
           cacheNotes();
         }
 
-        pendingDelete = { iso, note: { ...notes[iso] } };
-        delete notes[iso];
+        const arr = notes[iso] || [];
+        const note = arr.find(n => n.id === noteId);
+        if (!note) return;
+
+        pendingDelete = { iso, noteId, note };
+        notes[iso] = arr.filter(n => n.id !== noteId);
+        if (!notes[iso].length) delete notes[iso];
         refreshAll();
         showUndoToast();
 
         pendingDeleteTimer = setTimeout(() => {
           if (pendingDelete) {
-            fbDelete(pendingDelete.iso);
+            fbDelete(pendingDelete.noteId);
             cacheNotes();
             pendingDelete = null;
           }
@@ -2841,9 +2930,11 @@
 
       function undoDelete() {
         if (pendingDelete) {
-          notes[pendingDelete.iso] = pendingDelete.note;
+          const { iso, noteId, note } = pendingDelete;
           pendingDelete = null;
           clearTimeout(pendingDeleteTimer);
+          if (!notes[iso]) notes[iso] = [];
+          if (!notes[iso].find(n => n.id === noteId)) notes[iso].push(note);
           cacheNotes();
           refreshAll();
         }
@@ -2924,24 +3015,28 @@
         const toQ    = document.getElementById('hFilterTo')?.value     || '';
         const costQ  = document.getElementById('hFilterCost')?.value   || '';
 
-        let entries = Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0]));
+        // Flatten all note arrays sorted newest-first
+        let flat = [];
+        Object.entries(notes).sort((a,b) => b[0].localeCompare(a[0])).forEach(([iso, arr]) => {
+          arr.forEach(n => flat.push({ iso, n }));
+        });
 
-        if (textQ)  entries = entries.filter(([,n]) => n.text.toLowerCase().includes(textQ));
-        if (tagQ)   entries = entries.filter(([,n]) => n.tag === tagQ);
-        if (fromQ)  entries = entries.filter(([iso]) => iso >= fromQ);
-        if (toQ)    entries = entries.filter(([iso]) => iso <= toQ);
-        if (costQ === 'yes') entries = entries.filter(([,n]) => n.cost && parseFloat(n.cost) > 0);
-        if (costQ === 'no')  entries = entries.filter(([,n]) => !n.cost || parseFloat(n.cost) === 0);
+        if (textQ)  flat = flat.filter(e => e.n.text.toLowerCase().includes(textQ));
+        if (tagQ)   flat = flat.filter(e => e.n.tag === tagQ);
+        if (fromQ)  flat = flat.filter(e => e.iso >= fromQ);
+        if (toQ)    flat = flat.filter(e => e.iso <= toQ);
+        if (costQ === 'yes') flat = flat.filter(e => e.n.cost && parseFloat(e.n.cost) > 0);
+        if (costQ === 'no')  flat = flat.filter(e => !e.n.cost || parseFloat(e.n.cost) === 0);
 
-        const totalCost = entries.reduce((s,[,n]) => s + (parseFloat(n.cost)||0), 0);
-        const countWithCost = entries.filter(([,n]) => parseFloat(n.cost) > 0).length;
+        const totalCost = flat.reduce((s, e) => s + (parseFloat(e.n.cost)||0), 0);
+        const countWithCost = flat.filter(e => parseFloat(e.n.cost) > 0).length;
 
         const resultsEl = document.getElementById('historyResults');
         if (!resultsEl) return;
 
         const summary = `<div class="history-summary">
           <div class="history-stat">
-            <div class="history-stat-val">${entries.length}</div>
+            <div class="history-stat-val">${flat.length}</div>
             <div class="history-stat-lbl">Notes</div>
           </div>
           <div class="history-stat">
@@ -2954,17 +3049,17 @@
           </div>
         </div>`;
 
-        if (!entries.length) {
+        if (!flat.length) {
           resultsEl.innerHTML = summary + '<div class="page-empty">No notes match the filters.</div>';
           return;
         }
 
-        const items = entries.map(([iso, n]) => {
+        const items = flat.map(({ iso, n }) => {
           const bc    = n.tag ? tagColor(n.tag) : 'var(--border)';
           const cost  = parseFloat(n.cost);
           const costHtml = !isNaN(cost) && cost > 0
             ? `<span class="history-item-cost">₹${cost.toLocaleString('en-IN')}</span>` : '';
-          return `<div class="history-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}')">
+          return `<div class="history-item" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}','${n.id}')">
             <div class="history-item-header">
               <span class="history-item-date">${isoToDisplay(iso)}</span>
               ${tagPillHtml(n.tag, n.visitNum)}
@@ -3055,10 +3150,12 @@
           if (bannerTags.has(editingTag)) { bannerTags.delete(editingTag); bannerTags.add(newName); saveBannerTags(); }
           // Update all notes using the old tag name
           Object.keys(notes).forEach(iso => {
-            if (notes[iso].tag === editingTag) {
-              notes[iso] = { ...notes[iso], tag: newName };
-              fbSave(iso, notes[iso].text, newName, notes[iso].cost, notes[iso].visitNum);
-            }
+            notes[iso].forEach((n, i) => {
+              if (n.tag === editingTag) {
+                notes[iso][i] = { ...n, tag: newName };
+                fbSave(n.id, iso, n.text, newName, n.cost, n.visitNum, n.apptTime);
+              }
+            });
           });
           cacheNotes();
         }
@@ -3087,10 +3184,12 @@
         saveTags();
         if (bannerTags.has(tag)) { bannerTags.delete(tag); saveBannerTags(); }
         Object.keys(notes).forEach(iso => {
-          if (notes[iso].tag === tag) {
-            notes[iso] = { ...notes[iso], tag: '', visitNum: null };
-            fbSave(iso, notes[iso].text, '', notes[iso].cost, null);
-          }
+          notes[iso].forEach((n, i) => {
+            if (n.tag === tag) {
+              notes[iso][i] = { ...n, tag: '', visitNum: null };
+              fbSave(n.id, iso, n.text, '', n.cost, null, n.apptTime);
+            }
+          });
         });
         cacheNotes();
         recomputeTagCounts();
@@ -3638,10 +3737,13 @@
       }
 
       // ── NOTE DETAIL ──
-      function openNoteDetail(iso) {
-        const n = notes[iso];
+      function openNoteDetail(iso, noteId) {
+        const arr = notes[iso];
+        if (!arr || !arr.length) return;
+        const n = noteId ? arr.find(x => x.id === noteId) : arr[0];
         if (!n) return;
-        detailIso = iso;
+        detailIso    = iso;
+        detailNoteId = n.id;
 
         document.getElementById('detailDate').textContent = isoToDisplay(iso);
         document.getElementById('detailTag').innerHTML  = tagPillHtml(n.tag, n.visitNum);
@@ -3668,30 +3770,106 @@
 
       function closeNoteDetail() {
         document.getElementById('detailBackdrop').classList.remove('open');
-        detailIso = null;
+        detailIso    = null;
+        detailNoteId = null;
       }
 
       function editFromDetail() {
-        const iso = detailIso;
+        const iso    = detailIso;
+        const noteId = detailNoteId;
         closeNoteDetail();
-        openModal(iso);
+        openModal(iso, noteId);
       }
 
       function deleteFromDetail() {
-        const iso = detailIso;
+        const iso    = detailIso;
+        const noteId = detailNoteId;
         closeNoteDetail();
-        deleteNote(iso);
+        deleteNote(iso, noteId);
       }
 
       function handleDetailBackdropClick(e) {
         if (e.target === document.getElementById('detailBackdrop')) closeNoteDetail();
       }
 
+      // ── DAY DETAIL (multiple notes per day) ──
+      function openDayDetail(iso) {
+        dayDetailIso = iso;
+        document.getElementById('dayDetailDate').textContent = isoToDisplay(iso);
+        renderDayDetailList();
+        document.getElementById('dayDetailBackdrop').classList.add('open');
+      }
+
+      function closeDayDetail() {
+        document.getElementById('dayDetailBackdrop').classList.remove('open');
+        dayDetailIso = null;
+      }
+
+      function handleDayDetailBackdropClick(e) {
+        if (e.target === document.getElementById('dayDetailBackdrop')) closeDayDetail();
+      }
+
+      function renderDayDetailList() {
+        const iso = dayDetailIso;
+        const arr = (iso && notes[iso]) || [];
+        const el  = document.getElementById('dayDetailList');
+        if (!arr.length) {
+          el.innerHTML = '<div class="page-empty">No notes for this day.</div>';
+          return;
+        }
+        el.innerHTML = arr.map(n => {
+          const bc = n.tag ? tagColor(n.tag) : 'var(--border)';
+          const timeHtml = n.apptTime && isApptTag(n.tag)
+            ? `<span style="color:var(--cyan);font-size:0.75rem">· ${escapeHtml(n.apptTime)}</span>` : '';
+          return `<div class="day-detail-note" style="border-left-color:${bc}" onclick="openNoteDetail('${iso}','${n.id}')">
+            <div class="day-detail-note-header">
+              ${tagPillHtml(n.tag, n.visitNum)}
+              ${costBadgeHtml(n.cost)}
+              ${timeHtml}
+              <div style="margin-left:auto;display:flex;gap:6px">
+                <button class="btn-icon" onclick="event.stopPropagation();editNoteFromDay('${n.id}')">
+                  <svg class="icon"><use href="#i-edit"/></svg>
+                </button>
+                <button class="btn-icon btn-del" onclick="event.stopPropagation();deleteNoteFromDay('${n.id}')">
+                  <svg class="icon"><use href="#i-trash"/></svg>
+                </button>
+              </div>
+            </div>
+            ${n.text ? `<div class="day-detail-note-text">${escapeHtml(n.text)}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+
+      function addNoteForDay() {
+        const iso = dayDetailIso;
+        closeDayDetail();
+        openModal(iso || dateToISO(new Date()), null);
+      }
+
+      function editNoteFromDay(noteId) {
+        const iso = dayDetailIso;
+        closeDayDetail();
+        openModal(iso, noteId);
+      }
+
+      function deleteNoteFromDay(noteId) {
+        const iso = dayDetailIso;
+        deleteNote(iso, noteId);
+        if (!notes[iso] || !notes[iso].length) {
+          closeDayDetail();
+        } else {
+          renderDayDetailList();
+        }
+      }
+
 
       // ── MODAL ──
-      function openModal(iso) {
-        modalDate = iso;
-        const n = notes[iso];
+      // noteId = null → adding a new note; noteId = existing id → editing
+      function openModal(iso, noteId) {
+        modalDate   = iso;
+        modalNoteId = noteId || null;
+        const arr = notes[iso] || [];
+        const n   = noteId ? arr.find(x => x.id === noteId) : null;
         const isEdit = !!n;
         document.getElementById('modalTitle').textContent = isEdit ? 'Edit Note' : 'Add Note';
         document.getElementById('modalDateInput').value   = iso;
@@ -3705,7 +3883,7 @@
         const tag = n ? n.tag : '';
         if (tag) {
           document.getElementById('visitNumRow').style.display = 'block';
-          document.getElementById('modalVisitNum').value = n.visitNum || nextVisitNum(tag, iso);
+          document.getElementById('modalVisitNum').value = n.visitNum || nextVisitNum(tag, modalNoteId);
           syncTagDropdownCount();
         } else {
           document.getElementById('visitNumRow').style.display = 'none';
@@ -3723,12 +3901,13 @@
       }
 
       function openAddNoteModal() {
-        openModal(dateToISO(new Date()));
+        openModal(dateToISO(new Date()), null);
       }
 
       function closeModal() {
         document.getElementById('modalBackdrop').classList.remove('open');
-        modalDate = null;
+        modalDate   = null;
+        modalNoteId = null;
       }
 
       function saveModal() {
@@ -3743,17 +3922,31 @@
 
         const saveIso = document.getElementById('modalDateInput').value || modalDate;
 
-        if (modalDate && saveIso !== modalDate) {
-          delete notes[modalDate];
-          fbDelete(modalDate);
+        // If date changed and we were editing an existing note, remove it from the old day
+        if (modalNoteId && saveIso !== modalDate) {
+          if (notes[modalDate]) {
+            notes[modalDate] = notes[modalDate].filter(n => n.id !== modalNoteId);
+            if (!notes[modalDate].length) delete notes[modalDate];
+          }
+          fbDelete(modalNoteId);
+          modalNoteId = null; // will assign a new ID on the new date
         }
 
         if (text || cost) {
-          notes[saveIso] = { text, tag, cost, visitNum, apptTime };
-          fbSave(saveIso, text, tag, cost, visitNum, apptTime);
-        } else {
-          delete notes[saveIso];
-          fbDelete(saveIso);
+          const noteId  = modalNoteId || genNoteId(saveIso);
+          const noteObj = { id: noteId, text, tag, cost, visitNum, apptTime };
+          if (!notes[saveIso]) notes[saveIso] = [];
+          const idx = notes[saveIso].findIndex(n => n.id === noteId);
+          if (idx > -1) notes[saveIso][idx] = noteObj;
+          else notes[saveIso].push(noteObj);
+          fbSave(noteId, saveIso, text, tag, cost, visitNum, apptTime);
+        } else if (modalNoteId) {
+          // Empty content → delete the existing note
+          if (notes[saveIso]) {
+            notes[saveIso] = notes[saveIso].filter(n => n.id !== modalNoteId);
+            if (!notes[saveIso].length) delete notes[saveIso];
+          }
+          fbDelete(modalNoteId);
         }
         cacheNotes();
         refreshAll();
@@ -3765,7 +3958,7 @@
       }
 
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); closeMilestoneEdit(); closeTagEditor(); closeMedModal(); closeMedAlert(); return; }
+        if (e.key === 'Escape') { closeModal(); closeNoteDetail(); closeDayDetail(); closeMilestoneEdit(); closeTagEditor(); closeMedModal(); closeMedAlert(); return; }
         // Arrow keys flip months — ignored while typing or when any modal is open
         const tag = document.activeElement.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -3897,14 +4090,17 @@
         statusEl.style.display = 'block';
         try {
           // Use in-memory state — already synced from Firestore via live listeners.
-          // No network read needed.
+          // No network read needed. Version 2: key = noteId, value includes date field.
           const notesData = {};
-          Object.entries(notes).forEach(([iso, n]) => {
-            notesData[iso] = { text: n.text||'', tag: n.tag||'', cost: n.cost||'',
-                               visitNum: n.visitNum||null, apptTime: n.apptTime||'', date: iso };
+          Object.entries(notes).forEach(([iso, arr]) => {
+            arr.forEach(n => {
+              notesData[n.id] = { text: n.text||'', tag: n.tag||'', cost: n.cost||'',
+                                  visitNum: n.visitNum||null, apptTime: n.apptTime||'', date: iso };
+            });
           });
+          const noteCount = Object.keys(notesData).length;
           const payload = {
-            version: 1,
+            version: 2,
             exportedAt: new Date().toISOString(),
             notes: notesData,
             meds: meds,
@@ -3921,7 +4117,6 @@
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-          const noteCount = Object.keys(notesData).length;
           statusEl.className = 'data-status ok';
           statusEl.textContent = `Exported ${noteCount} note${noteCount !== 1 ? 's' : ''}, ${payload.meds.length} med${payload.meds.length !== 1 ? 's' : ''}, ${payload.milestones.length} milestone${payload.milestones.length !== 1 ? 's' : ''}.`;
         } catch (e) {
@@ -3961,14 +4156,17 @@
         }
         try {
           // ── Notes (batch write, max 500 per batch) ──
+          // v1 export: key = iso date, no date field needed (use key as both docId and date)
+          // v2 export: key = noteId, value has date field
           const noteEntries = Object.entries(payload.notes || {});
           progressEl.textContent = `Importing ${noteEntries.length} notes…`;
           const BATCH_SIZE = 400;
           for (let i = 0; i < noteEntries.length; i += BATCH_SIZE) {
             const chunk = noteEntries.slice(i, i + BATCH_SIZE);
             const batch = db.batch();
-            chunk.forEach(([iso, note]) => {
-              const ref = db.collection(FIRESTORE_COLLECTION).doc(iso);
+            chunk.forEach(([docId, note]) => {
+              const iso = note.date || docId; // v2 has date; v1 uses key as iso
+              const ref = db.collection(FIRESTORE_COLLECTION).doc(docId);
               batch.set(ref, {
                 text:      note.text      || '',
                 tag:       note.tag       || '',
