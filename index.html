@@ -2352,19 +2352,23 @@
         } catch { notes = {}; }
       }
 
-      // Live listener instead of a full-collection get() per page load:
-      // first snapshot rebuilds state (and is served from IndexedDB when cached),
-      // every later snapshot applies only the changed documents.
+      // Cache-first listener: localStorage already populated state on startup so we
+      // skip the IndexedDB-served cache snapshot entirely and only apply real server
+      // deltas. This means zero server reads on load — Firestore only wakes the
+      // listener when a document actually changes on the server.
       function subscribeNotes() {
-        let first = true;
+        let serverSeen = false;
         db.collection(FIRESTORE_COLLECTION).onSnapshot(snap => {
-          if (first) {
-            first = false;
+          if (snap.metadata.fromCache) return; // already loaded from localStorage — skip
+          if (!serverSeen) {
+            // First server snapshot: full rebuild in case localStorage was stale
+            serverSeen = true;
             notes = {};
             snap.forEach(doc => { notes[doc.id] = migrateNote(doc.data()); });
           } else {
+            // Subsequent snapshots: only changed documents cross the network
             snap.docChanges().forEach(ch => {
-              if (ch.doc.metadata.hasPendingWrites) return; // local echo — state already current
+              if (ch.doc.metadata.hasPendingWrites) return; // local echo — skip
               if (ch.type === 'removed') delete notes[ch.doc.id];
               else notes[ch.doc.id] = migrateNote(ch.doc.data());
             });
@@ -3198,14 +3202,16 @@
 
       function subscribeMeds() {
         db.collection(MEDS_COLLECTION).doc('list').onSnapshot(snap => {
-          if (!snap.exists || snap.metadata.hasPendingWrites) return;
+          // Skip cache snapshots — loadMeds() already populated from localStorage.
+          // Only act on real server pushes.
+          if (snap.metadata.fromCache || !snap.exists || snap.metadata.hasPendingWrites) return;
           meds = snap.data().meds || [];
           migrateMeds();
           localStorage.setItem(MEDS_KEY, JSON.stringify(meds));
           scheduleRefresh();
         }, e => console.warn('Firestore meds listener failed:', e));
         db.collection(MEDS_COLLECTION).doc('done').onSnapshot(snap => {
-          if (!snap.exists || snap.metadata.hasPendingWrites) return;
+          if (snap.metadata.fromCache || !snap.exists || snap.metadata.hasPendingWrites) return;
           medDone = snap.data().medDone || {};
           localStorage.setItem(MEDS_DONE_KEY, JSON.stringify(medDone));
           scheduleRefresh();
@@ -3859,28 +3865,22 @@
         btn.disabled = true;
         btn.textContent = 'Exporting…';
         statusEl.className = 'data-status info';
-        statusEl.textContent = 'Reading Firestore…';
+        statusEl.textContent = 'Preparing export…';
         statusEl.style.display = 'block';
         try {
-          // Fetch fresh copies directly from Firestore (not just the in-memory cache)
-          const [notesSnap, medsListSnap, medsDoneSnap] = await Promise.all([
-            db.collection(FIRESTORE_COLLECTION).get(),
-            db.collection(MEDS_COLLECTION).doc('list').get(),
-            db.collection(MEDS_COLLECTION).doc('done').get(),
-          ]);
+          // Use in-memory state — already synced from Firestore via live listeners.
+          // No network read needed.
           const notesData = {};
-          notesSnap.forEach(doc => {
-            const d = doc.data();
-            // strip server timestamps — they won't serialize cleanly
-            delete d.updatedAt;
-            notesData[doc.id] = d;
+          Object.entries(notes).forEach(([iso, n]) => {
+            notesData[iso] = { text: n.text||'', tag: n.tag||'', cost: n.cost||'',
+                               visitNum: n.visitNum||null, apptTime: n.apptTime||'', date: iso };
           });
           const payload = {
             version: 1,
             exportedAt: new Date().toISOString(),
             notes: notesData,
-            meds: medsListSnap.exists ? (medsListSnap.data().meds || []) : [],
-            medDone: medsDoneSnap.exists ? (medsDoneSnap.data().medDone || {}) : {},
+            meds: meds,
+            medDone: medDone,
             tags: tags,
             milestones: milestones,
           };
