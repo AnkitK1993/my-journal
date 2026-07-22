@@ -2143,7 +2143,7 @@
       const MONTH_NAMES  = ['January','February','March','April','May','June',
                             'July','August','September','October','November','December'];
       const DAY_ABBREV   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-      const DEFAULT_TAGS = ['Gynac', 'Blood Test', 'DOC'];
+      const DEFAULT_TAGS = ['Blood Test', 'DOC'];
       const TAG_COLORS   = ['#ff6b9d','#4ecdc4','#45b7d1','#ffd93d','#c084fc','#fb923c','#a3e635','#f87171'];
 
       // ── FIREBASE ──
@@ -2236,7 +2236,6 @@
       function loadTags() {
         try { tags = JSON.parse(localStorage.getItem(TAGS_KEY)) || [...DEFAULT_TAGS]; }
         catch { tags = [...DEFAULT_TAGS]; }
-        DEFAULT_TAGS.forEach(t => { if (!tags.includes(t)) tags.unshift(t); });
         rebuildTagColors();
       }
       function saveTags() {
