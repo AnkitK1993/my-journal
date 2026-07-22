@@ -2165,7 +2165,7 @@
       }
 
       // ── CONSTANTS ──
-      const START_DATE   = new Date(2026, 4, 5);
+      const START_DATE   = new Date(2026, 4, 12);
       const TOTAL_WEEKS  = 40;
       const STORAGE_KEY  = 'journalNotes';
       const TAGS_KEY     = 'journalTags';
@@ -2248,14 +2248,13 @@
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
       function daysSinceStart(date) {
-        const d0=new Date(2026,4,5), d1=new Date(date.getFullYear(),date.getMonth(),date.getDate());
+        const d0=new Date(2026,4,12), d1=new Date(date.getFullYear(),date.getMonth(),date.getDate());
         return Math.round((d1-d0)/86400000);
       }
       function weekNumber(date) {
         const diff=daysSinceStart(date);
         if(diff<0) return null;
-        if(diff<6) return 1;
-        return Math.floor((diff-6)/7)+2;
+        return Math.floor(diff/7)+1;
       }
       function trimesterBadgeClass(wk) {
         return wk<=13?'badge-t1':wk<=26?'badge-t2':'badge-t3';
