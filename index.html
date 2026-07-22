@@ -2274,6 +2274,22 @@
         localStorage.setItem(TAGS_KEY, JSON.stringify(tags));
         rebuildTagColors();
       }
+
+      // Ensure every tag referenced by a note exists in the tags[] list.
+      // This heals inconsistencies from imports, Firestore syncs from other devices,
+      // or a new tag being saved before the tags list was written.
+      function reconcileTagsFromNotes() {
+        let changed = false;
+        Object.values(notes).forEach(arr => {
+          arr.forEach(n => {
+            if (n.tag && !tags.includes(n.tag)) {
+              tags.push(n.tag);
+              changed = true;
+            }
+          });
+        });
+        if (changed) saveTags();
+      }
       function loadBannerTags() {
         try {
           const stored = JSON.parse(localStorage.getItem(BANNER_TAGS_KEY));
@@ -2388,7 +2404,14 @@
         const inp = document.getElementById('newTagInput');
         const name = inp.value.trim();
         if (!name) return;
-        if (!tags.includes(name)) { tags.push(name); saveTags(); }
+        if (!tags.includes(name)) {
+          tags.push(name);
+          saveTags();
+          // Sync tags page / history filter if they're visible behind the modal
+          if (currentPage === 'tags' || currentPage === 'history') {
+            refreshPageContent();
+          }
+        }
         inp.value = '';
         document.getElementById('newTagRow').classList.remove('visible');
         populateTagSelect('modalTagSelect', name);
@@ -2441,6 +2464,7 @@
               if (!notes[iso]) notes[iso] = [];
               notes[iso].push(migrateNote(data, doc.id));
             });
+            reconcileTagsFromNotes(); // heal any tags in notes that aren't in tags[]
           } else {
             // Subsequent snapshots: only changed documents cross the network
             snap.docChanges().forEach(ch => {
@@ -3160,7 +3184,8 @@
         }
         closeTagEditor();
         recomputeTagCounts();
-        if (currentPage === 'tags') navigateTo('tags');
+        updateApptBanner();   // banner may reference the renamed/added tag
+        navigateTo('tags');   // always re-render — tag editor is only reachable from tags
       }
 
       function promptDeleteTag(tag) {
@@ -3192,6 +3217,7 @@
         });
         cacheNotes();
         recomputeTagCounts();
+        updateApptBanner();   // remove any banner entries that used the deleted tag
         if (currentPage === 'tags') navigateTo('tags');
       }
 
@@ -3910,6 +3936,12 @@
       }
 
       function saveModal() {
+        // Auto-confirm a new tag the user typed but forgot to press Add/Enter on
+        if (document.getElementById('modalTagSelect')?.value === '__new__') {
+          const pending = (document.getElementById('newTagInput')?.value || '').trim();
+          if (pending) confirmNewTag();
+        }
+
         const text   = document.getElementById('modalTextarea').value.trim();
         const tagVal = document.getElementById('modalTagSelect').value;
         const tag    = tagVal==='__new__' ? '' : tagVal;
@@ -4201,6 +4233,8 @@
             milestones = payload.milestones;
             saveMilestones();
           }
+          // Heal any tags referenced in imported notes that weren't in the exported tags list
+          reconcileTagsFromNotes();
 
           progressEl.style.display = 'none';
           statusEl.className = 'data-status ok';
@@ -4226,6 +4260,7 @@
         loadMilestones();
         loadMeds();
         loadLocalNotes();
+        reconcileTagsFromNotes(); // sync any note tags missing from the tags list
         recomputeTagCounts();
         updateProgress();
         buildMonthDropdown();
